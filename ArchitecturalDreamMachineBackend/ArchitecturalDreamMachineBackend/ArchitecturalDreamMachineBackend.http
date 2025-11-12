@@ -1,0 +1,6 @@
+@ArchitecturalDreamMachineBackend_HostAddress = http://localhost:5095
+
+GET {{ArchitecturalDreamMachineBackend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
