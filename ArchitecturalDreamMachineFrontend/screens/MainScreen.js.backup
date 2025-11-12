@@ -1,0 +1,333 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
+import axios from 'axios';
+import { GLView } from 'expo-gl';
+import { Renderer } from 'expo-three';
+import * as THREE from 'three';
+
+// Replace with your local IP if testing on physical device
+const API_BASE_URL = 'http://localhost:5162';
+
+function HouseModelView({ houseParams }) {
+  const onContextCreate = async (gl) => {
+    // Create a WebGL renderer
+    const renderer = new Renderer({ gl });
+    renderer.setSize(gl.drawingBufferWidth, gl.drawingBufferHeight);
+
+    // Create scene
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf0f0f0);
+
+    // Create camera
+    const camera = new THREE.PerspectiveCamera(
+      75,
+      gl.drawingBufferWidth / gl.drawingBufferHeight,
+      0.1,
+      1000
+    );
+
+    if (houseParams) {
+      // Add lighting
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      scene.add(ambientLight);
+
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      directionalLight.position.set(10, 10, 10);
+      scene.add(directionalLight);
+
+      // Create house mesh from parameters
+      const baseSize = Math.sqrt(houseParams.lotSize);
+      const height = baseSize * 0.6;
+
+      const geometry = new THREE.BoxGeometry(baseSize, height, baseSize);
+      
+      // Map color names to THREE.Color
+      const colorMap = {
+        gray: new THREE.Color(0.5, 0.5, 0.5),
+        cream: new THREE.Color(0.98, 0.94, 0.84),
+        white: new THREE.Color(1, 1, 1),
+      };
+
+      const color = colorMap[houseParams.material.color.toLowerCase()] || new THREE.Color(1, 1, 1);
+      const material = new THREE.MeshStandardMaterial({ color });
+
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.y = height / 2;
+      scene.add(mesh);
+
+      // Position camera
+      const distance = baseSize * 2;
+      camera.position.set(distance, distance * 0.7, distance);
+      camera.lookAt(0, height / 2, 0);
+    }
+
+    // Animation loop
+    const render = () => {
+      requestAnimationFrame(render);
+      renderer.render(scene, camera);
+      gl.endFrameEXP();
+    };
+    render();
+  };
+
+  return (
+    <GLView
+      style={{ width: '100%', height: 300 }}
+      onContextCreate={onContextCreate}
+    />
+  );
+}
+
+export default function MainScreen() {
+  const [lotSize, setLotSize] = useState('');
+  const [stylePrompt, setStylePrompt] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [houseParams, setHouseParams] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [designInfo, setDesignInfo] = useState(null);
+
+  const handleGenerate = async () => {
+    // Clear previous errors
+    setErrorMessage('');
+    
+    // Validate inputs
+    const lotSizeNum = parseFloat(lotSize);
+    if (!lotSize || isNaN(lotSizeNum) || lotSizeNum <= 0) {
+      setErrorMessage('Please enter a valid lot size greater than 0');
+      return;
+    }
+
+    if (!stylePrompt.trim()) {
+      setErrorMessage('Please enter a style prompt');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/designs/generate`, {
+        lotSize: lotSizeNum,
+        stylePrompt: stylePrompt.trim(),
+      });
+
+      setHouseParams(response.data.houseParameters);
+      setDesignInfo({
+        styleName: response.data.styleName,
+        designId: response.data.designId,
+      });
+      setErrorMessage('');
+    } catch (error) {
+      if (error.response?.data?.error) {
+        setErrorMessage(error.response.data.error);
+      } else if (error.message.includes('Network Error') || error.message.includes('ECONNREFUSED')) {
+        setErrorMessage('Cannot connect to backend. Make sure the API is running at ' + API_BASE_URL);
+      } else {
+        setErrorMessage('Failed to generate design. Please try again.');
+      }
+      console.error('Error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <Text style={styles.headerText}>Architectural Dream Machine</Text>
+          <Text style={styles.subHeaderText}>
+            Generate your architectural design
+          </Text>
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Lot Size (sq ft):</Text>
+          <TextInput
+            style={styles.input}
+            value={lotSize}
+            onChangeText={setLotSize}
+            placeholder="e.g., 2500"
+            keyboardType="numeric"
+          />
+
+          <Text style={styles.label}>Style Prompt:</Text>
+          <TextInput
+            style={styles.input}
+            value={stylePrompt}
+            onChangeText={setStylePrompt}
+            placeholder="e.g., Modern minimalist, Victorian, Brutalist"
+            multiline
+          />
+
+          <TouchableOpacity
+            style={[styles.button, isLoading && styles.buttonDisabled]}
+            onPress={handleGenerate}
+            disabled={isLoading}
+          >
+            <Text style={styles.buttonText}>
+              {isLoading ? 'Generating...' : 'Generate and Display Model'}
+            </Text>
+          </TouchableOpacity>
+
+          {errorMessage ? (
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          ) : null}
+
+          {designInfo && (
+            <View style={styles.infoContainer}>
+              <Text style={styles.infoText}>Style: {designInfo.styleName}</Text>
+              <Text style={styles.infoText}>Design ID: {designInfo.designId}</Text>
+            </View>
+          )}
+        </View>
+
+        {houseParams && (
+          <View style={styles.canvasContainer}>
+            <Text style={styles.canvasLabel}>3D Model Preview</Text>
+            <View style={styles.canvas}>
+              <HouseModelView houseParams={houseParams} />
+            </View>
+            <View style={styles.modelInfo}>
+              <Text style={styles.modelInfoText}>Roof: {houseParams.roofType}</Text>
+              <Text style={styles.modelInfoText}>Windows: {houseParams.windowStyle}</Text>
+              <Text style={styles.modelInfoText}>Rooms: {houseParams.roomCount}</Text>
+              <Text style={styles.modelInfoText}>Material: {houseParams.material.texture}</Text>
+            </View>
+          </View>
+        )}
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  headerText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+  },
+  subHeaderText: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 5,
+  },
+  inputContainer: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+    marginTop: 10,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#fafafa',
+  },
+  button: {
+    backgroundColor: '#007AFF',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  buttonDisabled: {
+    backgroundColor: '#999',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  errorText: {
+    color: '#ff3b30',
+    fontSize: 14,
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  infoContainer: {
+    marginTop: 15,
+    padding: 10,
+    backgroundColor: '#e8f5e9',
+    borderRadius: 8,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#2e7d32',
+    marginVertical: 2,
+  },
+  canvasContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  canvasLabel: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 10,
+  },
+  canvas: {
+    width: '100%',
+    height: 300,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  modelInfo: {
+    marginTop: 15,
+    padding: 10,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+  },
+  modelInfoText: {
+    fontSize: 14,
+    color: '#555',
+    marginVertical: 3,
+  },
+});
