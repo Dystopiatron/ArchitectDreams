@@ -1,6 +1,10 @@
 # Architectural Dream Machine
 
-Turn your ideas into 3D house designs instantly. Type a style, see a rotating 3D model, download for professional CAD software.
+THIS IS A WIP/NOT FINALIZED!!
+
+
+
+Turn your ideas into 3D house designs instantly. Type a style, see a rotating 3D model, download for professional CAD software. 
 
 ---
 
