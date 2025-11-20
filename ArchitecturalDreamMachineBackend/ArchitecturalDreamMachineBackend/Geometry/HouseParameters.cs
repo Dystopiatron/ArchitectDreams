@@ -7,6 +7,25 @@ public class HouseParameters
     public string WindowStyle { get; set; } = string.Empty;
     public int RoomCount { get; set; }
     public Material Material { get; set; } = new();
+    
+    // Architectural parameters
+    public double CeilingHeight { get; set; } = 9.0;
+    public int Stories { get; set; } = 1;
+    public string BuildingShape { get; set; } = "rectangular";
+    public double WindowToWallRatio { get; set; } = 0.15;
+    public string FoundationType { get; set; } = "slab";
+    public string ExteriorMaterial { get; set; } = "stucco";
+    public double RoofPitch { get; set; } = 6.0;
+    public bool HasParapet { get; set; } = false;
+    public bool HasEaves { get; set; } = true;
+    public double EavesOverhang { get; set; } = 1.5;
+    
+    // Building footprint dimensions (used for room layout)
+    public double FootprintWidth { get; set; }
+    public double FootprintDepth { get; set; }
+    
+    // Floor plan data
+    public List<Room> Rooms { get; set; } = new();
 
     public Mesh GenerateMesh()
     {
@@ -50,4 +69,16 @@ public class HouseParameters
         
         return mesh;
     }
+}
+
+public class Room
+{
+    public string Name { get; set; } = string.Empty; // "Living Room", "Bedroom 1", etc.
+    public int Floor { get; set; } = 1; // 1, 2, 3
+    public double X { get; set; }
+    public double Z { get; set; }
+    public double Width { get; set; }
+    public double Depth { get; set; }
+    public int WindowCount { get; set; }
+    public bool HasDoor { get; set; } = true;
 }
