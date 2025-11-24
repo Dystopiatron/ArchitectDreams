@@ -259,6 +259,9 @@ public class DesignsController : ControllerBase
         string shape)
     {
         var rooms = new List<Room>();
+        
+        // Generate rooms for full footprint dimensions
+        // Frontend will handle filtering walls based on actual building shape
 
         if (roomCount <= 3)
         {

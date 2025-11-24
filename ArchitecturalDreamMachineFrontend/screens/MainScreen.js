@@ -17,6 +17,8 @@ const API_BASE_URL = 'http://localhost:5095';
 export default function MainScreen() {
   const [lotSize, setLotSize] = useState('');
   const [stylePrompt, setStylePrompt] = useState('');
+  const [layoutType, setLayoutType] = useState('auto'); // auto, cube, two-story, l-shape, split, angled
+  const [stories, setStories] = useState('auto'); // auto, 1, 2, 3
   const [errorMessage, setErrorMessage] = useState('');
   const [houseParams, setHouseParams] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -71,7 +73,15 @@ export default function MainScreen() {
         stylePrompt: stylePrompt.trim(),
       });
 
-      setHouseParams(response.data.houseParameters);
+      // Add layout and stories overrides if specified
+      const params = { ...response.data.houseParameters };
+      if (layoutType !== 'auto') {
+        params.layoutOverride = layoutType;
+      }
+      if (stories !== 'auto') {
+        params.stories = parseInt(stories);
+      }
+      setHouseParams(params);
       setMeshData(response.data.mesh);
       setDesignInfo({
         styleName: response.data.styleName,
@@ -122,6 +132,36 @@ export default function MainScreen() {
             placeholder="e.g., Modern minimalist, Victorian, Brutalist"
             multiline
           />
+
+          <Text style={styles.label}>Building Layout:</Text>
+          <View style={styles.pickerContainer}>
+            <select 
+              style={styles.picker}
+              value={layoutType}
+              onChange={(e) => setLayoutType(e.target.value)}
+            >
+              <option value="auto">🎲 Auto (Based on Lot Size)</option>
+              <option value="cube">🟦 Traditional Cube</option>
+              <option value="two-story">🏢 Two-Story (Compact Upper)</option>
+              <option value="l-shape">🔲 L-Shaped</option>
+              <option value="split">📐 Split-Level</option>
+              <option value="angled">↗️ Angled Modern</option>
+            </select>
+          </View>
+
+          <Text style={styles.label}>Number of Stories:</Text>
+          <View style={styles.pickerContainer}>
+            <select 
+              style={styles.picker}
+              value={stories}
+              onChange={(e) => setStories(e.target.value)}
+            >
+              <option value="auto">🎲 Auto (Based on Style)</option>
+              <option value="1">1️⃣ Single Story</option>
+              <option value="2">2️⃣ Two Stories</option>
+              <option value="3">3️⃣ Three Stories</option>
+            </select>
+          </View>
 
           <TouchableOpacity
             style={[styles.button, isLoading && styles.buttonDisabled]}
@@ -268,6 +308,21 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     backgroundColor: '#fafafa',
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    backgroundColor: '#fafafa',
+    overflow: 'hidden',
+  },
+  picker: {
+    width: '100%',
+    padding: 12,
+    fontSize: 16,
+    border: 'none',
+    backgroundColor: '#fafafa',
+    cursor: 'pointer',
   },
   button: {
     backgroundColor: '#007AFF',
