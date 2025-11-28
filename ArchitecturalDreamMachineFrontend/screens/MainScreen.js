@@ -68,19 +68,30 @@ export default function MainScreen() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/designs/generate`, {
+      // Build request with optional overrides
+      const requestData = {
         lotSize: lotSizeNum,
         stylePrompt: stylePrompt.trim(),
-      });
-
-      // Add layout and stories overrides if specified
-      const params = { ...response.data.houseParameters };
+      };
+      
+      // Add overrides if user specified them
       if (layoutType !== 'auto') {
-        params.layoutOverride = layoutType;
+        requestData.buildingShapeOverride = layoutType;
       }
       if (stories !== 'auto') {
-        params.stories = parseInt(stories);
+        requestData.storiesOverride = parseInt(stories);
       }
+      
+      const response = await axios.post(`${API_BASE_URL}/api/designs/generate`, requestData);
+
+      // Get parameters from backend (already has overrides applied)
+      const params = { ...response.data.houseParameters };
+      
+      // Include geometry from backend
+      if (response.data.geometry) {
+        params.geometry = response.data.geometry;
+      }
+      
       setHouseParams(params);
       setMeshData(response.data.mesh);
       setDesignInfo({
@@ -144,7 +155,7 @@ export default function MainScreen() {
               <option value="cube">🟦 Traditional Cube</option>
               <option value="two-story">🏢 Two-Story (Compact Upper)</option>
               <option value="l-shape">🔲 L-Shaped</option>
-              <option value="split">📐 Split-Level</option>
+              <option value="split-level">📐 Split-Level</option>
               <option value="angled">↗️ Angled Modern</option>
             </select>
           </View>

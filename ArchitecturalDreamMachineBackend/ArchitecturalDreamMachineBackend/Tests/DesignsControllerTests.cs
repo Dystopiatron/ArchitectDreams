@@ -2,6 +2,7 @@ using Xunit;
 using Microsoft.EntityFrameworkCore;
 using ArchitecturalDreamMachineBackend.Data;
 using ArchitecturalDreamMachineBackend.Controllers;
+using ArchitecturalDreamMachineBackend.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Microsoft.AspNetCore.Mvc;
@@ -62,7 +63,8 @@ public class DesignsControllerTests
         // Arrange
         var context = GetInMemoryDbContext();
         var logger = new Mock<ILogger<DesignsController>>();
-        var controller = new DesignsController(context, logger.Object);
+        var mockOrchestration = new Mock<DesignOrchestrationService>(null, null, null, null);
+        var controller = new DesignsController(context, logger.Object, mockOrchestration.Object);
 
         var request = new GenerateRequest
         {
@@ -89,7 +91,8 @@ public class DesignsControllerTests
         // Arrange
         var context = GetInMemoryDbContext();
         var logger = new Mock<ILogger<DesignsController>>();
-        var controller = new DesignsController(context, logger.Object);
+        var mockOrchestration = new Mock<DesignOrchestrationService>(null, null, null, null);
+        var controller = new DesignsController(context, logger.Object, mockOrchestration.Object);
 
         var request = new GenerateRequest
         {
@@ -110,7 +113,8 @@ public class DesignsControllerTests
         // Arrange
         var context = GetInMemoryDbContext();
         var logger = new Mock<ILogger<DesignsController>>();
-        var controller = new DesignsController(context, logger.Object);
+        var mockOrchestration = new Mock<DesignOrchestrationService>(null, null, null, null);
+        var controller = new DesignsController(context, logger.Object, mockOrchestration.Object);
 
         var request = new GenerateRequest
         {
@@ -131,7 +135,8 @@ public class DesignsControllerTests
         // Arrange
         var context = GetInMemoryDbContext();
         var logger = new Mock<ILogger<DesignsController>>();
-        var controller = new DesignsController(context, logger.Object);
+        var mockOrchestration = new Mock<DesignOrchestrationService>(null, null, null, null);
+        var controller = new DesignsController(context, logger.Object, mockOrchestration.Object);
 
         // Add test designs
         context.Designs.AddRange(

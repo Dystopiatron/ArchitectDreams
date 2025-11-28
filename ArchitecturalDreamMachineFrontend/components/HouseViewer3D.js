@@ -1,12 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { SceneManager } from '../renderers/SceneManager.js';
+import { GeometryRenderer } from '../renderers/GeometryRenderer.js';
+import { DisposalManager } from '../utils/DisposalManager.js';
 
 export default function HouseViewer3D({ houseParams }) {
   const mountRef = useRef(null);
-  const sceneRef = useRef(null);
-  const rendererRef = useRef(null);
-  const cameraRef = useRef(null);
-  const meshRef = useRef(null);
+  const sceneManagerRef = useRef(null);
+  const houseGroupRef = useRef(null);
 
   useEffect(() => {
     if (!mountRef.current || !houseParams) {
@@ -20,851 +21,75 @@ export default function HouseViewer3D({ houseParams }) {
     console.log('HouseViewer3D: Initializing with params', houseParams);
 
     let frameId;
-    let handleResize;
     
     try {
-      // Scene setup
-      const scene = new THREE.Scene();
-      scene.background = new THREE.Color(0xf0f0f0);
-      sceneRef.current = scene;
-
-    // Camera setup
-    const width = mountRef.current.clientWidth;
-    const canvasHeight = 400;
-    const camera = new THREE.PerspectiveCamera(50, width / canvasHeight, 0.1, 1000);
-    cameraRef.current = camera;
-
-    // Renderer setup
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(width, canvasHeight);
-    renderer.shadowMap.enabled = true;
-    
-    // Add canvas and make it non-interactive for scrolling
-    const canvas = renderer.domElement;
-    canvas.style.display = 'block';
-    canvas.style.touchAction = 'pan-y'; // Allow vertical touch scrolling
-    
-    mountRef.current.appendChild(canvas);
-    rendererRef.current = renderer;
-
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-    scene.add(ambientLight);
-
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(10, 20, 10);
-    directionalLight.castShadow = true;
-    scene.add(directionalLight);
-
-    const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
-    directionalLight2.position.set(-10, 10, -10);
-    scene.add(directionalLight2);
-
-    // Ground plane
-    const groundGeometry = new THREE.PlaneGeometry(200, 200);
-    const groundMaterial = new THREE.MeshStandardMaterial({ 
-      color: 0x7cb342,
-      roughness: 0.8
-    });
-    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -0.1;
-    ground.receiveShadow = true;
-    scene.add(ground);
-
-        // Calculate building dimensions from lot size
-    const stories = houseParams.stories || 1;
-    const ceilingHeight = houseParams.ceilingHeight || 9.0;
-    
-    // Use footprint dimensions from backend (these match the room layout)
-    const footprintWidth = houseParams.footprintWidth || Math.sqrt(houseParams.lotSize / stories / 1.5);
-    const footprintDepth = houseParams.footprintDepth || (houseParams.lotSize / stories / footprintWidth);
-    
-    // Use footprintWidth as base size for compatibility with existing layouts
-    const baseSize = footprintWidth;
-    const baseDepth = footprintDepth;
-    const height = ceilingHeight; // Single floor height
-    const totalHeight = ceilingHeight * stories; // Total building height
-
-    // Enhanced material mapping with architectural properties
-    const colorMap = {
-      gray: 0x808080,
-      cream: 0xfaf0dc,
-      white: 0xffffff,
-    };
-
-    const color = colorMap[houseParams.material.color.toLowerCase()] || 0xffffff;
-    
-    // Create materials based on exterior material type
-    const exteriorMaterial = houseParams.exteriorMaterial || 'stucco';
-    const roughnessMap = {
-      'concrete': 0.95,
-      'wood siding': 0.8,
-      'stucco': 0.7,
-      'brick': 0.85,
-      'glass': 0.3
-    };
-    const roughness = roughnessMap[exteriorMaterial.toLowerCase()] || 0.7;
-
-    // Create a group to hold all house parts
-    const houseGroup = new THREE.Group();
-    scene.add(houseGroup);
-    meshRef.current = houseGroup;
-
-    // Determine building layout from backend BuildingShape or manual override
-    let layoutSeed;
-    
-    if (houseParams.layoutOverride) {
-      // Manual override from dropdown
-      const layoutMap = {
-        'cube': 0,
-        'two-story': 1,
-        'l-shape': 2,
-        'split': 3,
-        'angled': 4
-      };
-      layoutSeed = layoutMap[houseParams.layoutOverride] ?? 0;
-      console.log('Layout override:', houseParams.layoutOverride, '-> seed:', layoutSeed);
-    } else if (houseParams.buildingShape) {
-      // Use BuildingShape from backend style template
-      const shapeToLayout = {
-        'rectangular': stories >= 2 ? 1 : 0, // Two-story or cube based on stories
-        'l-shape': 2,
-        'u-shape': 2, // Treat as L-shape for now
-        'split-level': 3,
-        'modern': 4
-      };
-      layoutSeed = shapeToLayout[houseParams.buildingShape.toLowerCase()] ?? (stories >= 2 ? 1 : 0);
-      console.log('Layout from BuildingShape:', houseParams.buildingShape, '-> seed:', layoutSeed);
-    } else {
-      // Fallback: base on number of stories
-      layoutSeed = stories >= 2 ? 1 : 0;
-      console.log('Layout seed:', layoutSeed, 'from stories:', stories);
-    }
-    
-    // Helper function to create a house section with architectural details
-    const createHouseSection = (width, floorHeight, depth, x, y, z, addWindows = true, floorNum = 1) => {
-      const sectionGeometry = new THREE.BoxGeometry(width, floorHeight, depth);
-      const sectionMaterial = new THREE.MeshStandardMaterial({ 
-        color: color,
-        roughness: roughness,
-        metalness: exteriorMaterial === 'concrete' ? 0.05 : 0.1
-      });
-      const section = new THREE.Mesh(sectionGeometry, sectionMaterial);
-      section.position.set(x, y, z);
-      section.castShadow = true;
-      section.receiveShadow = true;
-      houseGroup.add(section);
-
-      // Add floor platform for upper stories
-      if (floorNum > 1) {
-        const floorGeometry = new THREE.BoxGeometry(width, 0.5, depth);
-        const floorMaterial = new THREE.MeshStandardMaterial({
-          color: 0x8b7355, // Wood color
-          roughness: 0.8
+      // Initialize scene manager
+      const sceneManager = new SceneManager(
+        mountRef.current,
+        mountRef.current.clientWidth,
+        400
+      );
+      sceneManagerRef.current = sceneManager;
+      
+      // Create house group
+      const houseGroup = new THREE.Group();
+      sceneManager.scene.add(houseGroup);
+      houseGroupRef.current = houseGroup;
+      
+      // Render building from backend geometry
+      if (houseParams.geometry) {
+        console.log('✅ Backend geometry received:', {
+          sections: houseParams.geometry.sections?.length || 0,
+          roofs: houseParams.geometry.roofs?.length || 0,
+          totalHeight: houseParams.geometry.totalHeight,
+          maxDimension: houseParams.geometry.maxDimension
         });
-        const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-        floor.position.set(x, y - floorHeight/2 - 0.25, z);
-        floor.castShadow = true;
-        houseGroup.add(floor);
-      }
-
-      // Add windows to this section
-      if (addWindows) {
-        const windowMaterial = new THREE.MeshPhysicalMaterial({
-          color: 0x88ccff,
-          transparent: true,
-          opacity: 0.7,
-          transmission: 0.8,
-          thickness: 0.5,
-          roughness: 0.05,
-          metalness: 0
-        });
-
-        // Window sizing based on style and window-to-wall ratio
-        const windowRatio = houseParams.windowToWallRatio || 0.15;
-        let windowWidth, windowHeight, numWindows;
+        GeometryRenderer.renderBuilding(houseGroup, houseParams.geometry);
         
-        if (houseParams.windowStyle && houseParams.windowStyle.toLowerCase().includes('large')) {
-          // Modern large windows
-          windowWidth = width * 0.15;
-          windowHeight = floorHeight * 0.6;
-          numWindows = Math.floor(width / (windowWidth * 1.8));
-        } else if (houseParams.windowStyle && houseParams.windowStyle.toLowerCase().includes('ornate')) {
-          // Victorian smaller windows
-          windowWidth = width * 0.08;
-          windowHeight = floorHeight * 0.4;
-          numWindows = Math.floor(width / (windowWidth * 1.5));
-        } else {
-          // Standard windows
-          windowWidth = width * 0.10;
-          windowHeight = floorHeight * 0.5;
-          numWindows = Math.floor(width / (windowWidth * 2));
-        }
-
-        // Limit windows per wall
-        numWindows = Math.min(numWindows, 5);
-        numWindows = Math.max(numWindows, 1);
-
-        // Front windows
-        for (let i = 0; i < numWindows; i++) {
-          const window = new THREE.Mesh(
-            new THREE.BoxGeometry(windowWidth, windowHeight, 0.3),
-            windowMaterial
-          );
-          const spacing = width / (numWindows + 1);
-          window.position.set(
-            x - width/2 + spacing * (i + 1),
-            y,
-            z + depth / 2 + 0.2
-          );
-          
-          // Window frame
-          const frameGeometry = new THREE.BoxGeometry(windowWidth * 1.1, windowHeight * 1.1, 0.2);
-          const frameMaterial = new THREE.MeshStandardMaterial({
-            color: 0xffffff,
-            roughness: 0.4
-          });
-          const frame = new THREE.Mesh(frameGeometry, frameMaterial);
-          frame.position.copy(window.position);
-          frame.position.z -= 0.05;
-          
-          houseGroup.add(window);
-          houseGroup.add(frame);
-        }
-      }
-
-      return section;
-    };
-
-    // Create interior walls based on room layout
-    const createInteriorWalls = (rooms) => {
-      if (!rooms || rooms.length === 0) return;
-      
-      const wallThickness = 0.5; // 6 inches (standard interior wall)
-      const wallMaterial = new THREE.MeshStandardMaterial({
-        color: 0xf5f5dc, // Beige/cream color for interior walls
-        roughness: 0.8,
-        side: THREE.DoubleSide
-      });
-      
-      // Backend generates rooms with coordinates from (0,0) origin
-      // But Three.js building is centered at (0,0)
-      // Need to offset room coordinates to center them
-      const offsetX = -footprintWidth / 2;
-      const offsetZ = -footprintDepth / 2;
-      
-      // Group rooms by floor for processing
-      const roomsByFloor = {};
-      rooms.forEach(room => {
-        if (!roomsByFloor[room.floor]) {
-          roomsByFloor[room.floor] = [];
-        }
-        roomsByFloor[room.floor].push(room);
-      });
-      
-      // Create walls for each room
-      Object.keys(roomsByFloor).forEach(floor => {
-        const floorRooms = roomsByFloor[floor];
-        const floorNum = parseInt(floor);
-        
-        // Wall height calculation per floor
-        const isTopFloor = floorNum === stories;
-        const floorY = floorNum === 1 ? 0 : (floorNum - 1) * height;
-        
-        // For top floor with gabled roof, walls will be shaped to follow roof slope
-        // For other floors or flat roofs, use standard rectangular walls
-        const useRoofSlope = isTopFloor && houseParams.roofType === 'gabled';
-        
-        // Calculate roof parameters if needed for sloped walls
-        let roofPeakHeight = 0;
-        let roofSlope = 0;
-        if (useRoofSlope) {
-          const roofPitch = houseParams.roofPitch || 6;
-          const pitchRatio = roofPitch / 12;
-          const roofBaseForCalc = Math.sqrt(Math.pow(baseSize / 2, 2) + Math.pow(baseDepth / 2, 2));
-          roofPeakHeight = roofBaseForCalc * pitchRatio;
-          roofSlope = pitchRatio; // Rise over run
-        }
-        
-        // For top floor with gabled roof, walls adapt to roof slope
-        // For other floors, use standard height
-        let wallHeight = height;
-        
-        floorRooms.forEach(room => {
-          // Convert backend coordinates (origin at corner) to Three.js coordinates (origin at center)
-          const roomCenterX = room.x + room.width / 2 + offsetX;
-          const roomCenterZ = room.z + room.depth / 2 + offsetZ;
-          
-          // Room boundaries
-          const roomMinX = roomCenterX - room.width / 2;
-          const roomMaxX = roomCenterX + room.width / 2;
-          const roomMinZ = roomCenterZ - room.depth / 2;
-          const roomMaxZ = roomCenterZ + room.depth / 2;
-          
-          // Create 4 walls for each room
-          // For top floor with gabled roof, calculate wall height based on distance from center
-          
-          // Helper function to calculate wall height at a given distance from building center
-          const calculateWallHeightAtPosition = (distanceFromCenter) => {
-            if (!useRoofSlope) return wallHeight;
-            
-            // For gabled roofs, the roof slopes down from center to edges
-            // Calculate the maximum safe wall height at this position
-            // to ensure it stays well under the roof line
-            
-            const maxDistance = Math.sqrt(Math.pow(baseSize / 2, 2) + Math.pow(baseDepth / 2, 2));
-            const distanceRatio = distanceFromCenter / maxDistance;
-            
-            // Conservative heights to ensure walls don't exceed roof:
-            // At center: 60% of floor height
-            // At edges: 30% of floor height
-            // This gives plenty of clearance for the sloped roof
-            return height * (0.6 - (distanceRatio * 0.3));
-          };
-          
-          // Create 4 walls - calculate height based on distance from center to stay under roof
-          // Front wall (Z+)
-          const frontDist = Math.sqrt(Math.pow(roomCenterX, 2) + Math.pow(roomMaxZ, 2));
-          const frontWallHeight = calculateWallHeightAtPosition(frontDist);
-          const frontWall = new THREE.Mesh(
-            new THREE.BoxGeometry(room.width, frontWallHeight, wallThickness),
-            wallMaterial
-          );
-          frontWall.position.set(roomCenterX, floorY + frontWallHeight / 2, roomMaxZ);
-          
-          // Back wall (Z-)
-          const backDist = Math.sqrt(Math.pow(roomCenterX, 2) + Math.pow(roomMinZ, 2));
-          const backWallHeight = calculateWallHeightAtPosition(backDist);
-          const backWall = new THREE.Mesh(
-            new THREE.BoxGeometry(room.width, backWallHeight, wallThickness),
-            wallMaterial
-          );
-          backWall.position.set(roomCenterX, floorY + backWallHeight / 2, roomMinZ);
-          
-          // Left wall (X-)
-          const leftDist = Math.sqrt(Math.pow(roomMinX, 2) + Math.pow(roomCenterZ, 2));
-          const leftWallHeight = calculateWallHeightAtPosition(leftDist);
-          const leftWall = new THREE.Mesh(
-            new THREE.BoxGeometry(wallThickness, leftWallHeight, room.depth),
-            wallMaterial
-          );
-          leftWall.position.set(roomMinX, floorY + leftWallHeight / 2, roomCenterZ);
-          
-          // Right wall (X+)
-          const rightDist = Math.sqrt(Math.pow(roomMaxX, 2) + Math.pow(roomCenterZ, 2));
-          const rightWallHeight = calculateWallHeightAtPosition(rightDist);
-          const rightWall = new THREE.Mesh(
-            new THREE.BoxGeometry(wallThickness, rightWallHeight, room.depth),
-            wallMaterial
-          );
-          rightWall.position.set(roomMaxX, floorY + rightWallHeight / 2, roomCenterZ);
-          
-          // Add doorway opening if room has a door (subtract a section from one wall)
-          if (room.hasDoor) {
-            const doorWidth = 3; // 36 inches standard
-            const doorHeight = 6.67; // 80 inches
-            
-            // Create doorway in the front wall for simplicity
-            // In future, could detect adjacent rooms and place doors between them
-            const doorOpening = new THREE.Mesh(
-              new THREE.BoxGeometry(doorWidth, doorHeight, wallThickness + 0.1),
-              new THREE.MeshStandardMaterial({ 
-                colorWrite: false, // Makes it invisible but still cuts geometry
-                transparent: true,
-                opacity: 0
-              })
-            );
-            doorOpening.position.set(roomCenterX, floorY + doorHeight / 2, roomMaxZ);
-            
-            // Use CSG would be ideal here, but for simplicity we'll just mark the wall
-            // For now, we'll skip adding the wall section where the door should be
-          }
-          
-          // Only add INTERIOR walls - walls that are clearly inside the building
-          // Backend generates rooms for full footprint, frontend creates varied building shapes
-          // We need to check if walls fall within the ACTUAL building geometry created
-          // Use larger threshold to prevent walls from touching exterior or protruding
-          
-          const interiorThreshold = Math.max(wallThickness * 3, 2.0); // At least 2ft from edge
-          let isFrontInterior = false;
-          let isBackInterior = false;
-          let isLeftInterior = false;
-          let isRightInterior = false;
-          
-          // Determine building bounds for THIS specific floor and layout
-          // Each floor can have different dimensions based on layout
-          let buildingMinX, buildingMaxX, buildingMinZ, buildingMaxZ;
-          const margin = interiorThreshold;
-          
-          if (layoutSeed === 0) {
-            // Cube - all floors same size, full rectangular footprint
-            buildingMinX = -baseSize / 2 + margin;
-            buildingMaxX = baseSize / 2 - margin;
-            buildingMinZ = -baseDepth / 2 + margin;
-            buildingMaxZ = baseDepth / 2 - margin;
-            
-          } else if (layoutSeed === 1) {
-            // Two-story with smaller upper floor
-            if (floorNum === 1) {
-              // First floor: full footprint
-              buildingMinX = -baseSize / 2 + margin;
-              buildingMaxX = baseSize / 2 - margin;
-              buildingMinZ = -baseDepth / 2 + margin;
-              buildingMaxZ = baseDepth / 2 - margin;
-            } else {
-              // Second floor: 85% scaled (centered)
-              const scaled = 0.85;
-              buildingMinX = -baseSize * scaled / 2 + margin;
-              buildingMaxX = baseSize * scaled / 2 - margin;
-              buildingMinZ = -baseDepth * scaled / 2 + margin;
-              buildingMaxZ = baseDepth * scaled / 2 - margin;
-            }
-            
-          } else if (layoutSeed === 2) {
-            // L-shape: typically single story, but support multi-story on main wing
-            // Main wing: baseSize × (baseDepth * 0.6) centered at Z=-baseDepth*0.2
-            const wingDepth = baseDepth * 0.6;
-            const wingCenterZ = -baseDepth * 0.2;
-            buildingMinX = -baseSize / 2 + margin;
-            buildingMaxX = baseSize / 2 - margin;
-            buildingMinZ = wingCenterZ - wingDepth / 2 + margin;
-            buildingMaxZ = wingCenterZ + wingDepth / 2 - margin;
-            
-          } else if (layoutSeed === 3) {
-            // Split-level: two levels at different heights
-            // Use reduced footprint for both levels
-            const reduced = 0.7;
-            buildingMinX = -baseSize / 2 + margin;
-            buildingMaxX = baseSize * 0.4 - margin; // Upper level is offset
-            buildingMinZ = -baseDepth * reduced / 2 + margin;
-            buildingMaxZ = baseDepth * reduced / 2 - margin;
-            
-          } else if (layoutSeed === 4) {
-            // Angled: reduced and rotated sections
-            // Use conservative bounds for main section
-            const reduced = 0.7;
-            buildingMinX = -baseSize / 2 + margin;
-            buildingMaxX = baseSize / 2 - margin;
-            buildingMinZ = -baseDepth * reduced / 2 + margin;
-            buildingMaxZ = baseDepth * reduced / 2 - margin;
-          }
-          
-          // Check if each wall is within building bounds
-          // Walls must be FULLY inside the building bounds (both ends)
-          isFrontInterior = roomMaxZ < buildingMaxZ && roomMinX > buildingMinX && roomMaxX < buildingMaxX;
-          isBackInterior = roomMinZ > buildingMinZ && roomMinX > buildingMinX && roomMaxX < buildingMaxX;
-          isLeftInterior = roomMinX > buildingMinX && roomMinZ > buildingMinZ && roomMaxZ < buildingMaxZ;
-          isRightInterior = roomMaxX < buildingMaxX && roomMinZ > buildingMinZ && roomMaxZ < buildingMaxZ;
-          
-          // Debug log for first room of each floor
-          if (room === floorRooms[0]) {
-            console.log(`Floor ${floorNum}: bounds X[${buildingMinX.toFixed(1)},${buildingMaxX.toFixed(1)}] Z[${buildingMinZ.toFixed(1)},${buildingMaxZ.toFixed(1)}], wallHeight=${wallHeight.toFixed(1)}`);
-          }
-          
-          // Add only interior walls
-          if (isFrontInterior) houseGroup.add(frontWall);
-          if (isBackInterior) houseGroup.add(backWall);
-          if (isLeftInterior) houseGroup.add(leftWall);
-          if (isRightInterior) houseGroup.add(rightWall);
-        });
-      });
-    };
-
-    // Generate different layouts based on seed
-    let mainHeight = totalHeight;
-    
-    console.log('Generating layout type:', layoutSeed);
-    
-    if (layoutSeed === 0) {
-      // Traditional cube - support multi-story
-      console.log('Layout: Traditional cube with', stories, 'stories');
-      // Create each floor
-      for (let floor = 1; floor <= stories; floor++) {
-        const floorY = (floor - 0.5) * height;
-        createHouseSection(baseSize, height, baseDepth, 0, floorY, 0, true, floor);
-      }
-      mainHeight = height * stories;
-      
-    } else if (layoutSeed === 1) {
-      // Two-story house (always two stories for this layout)
-      console.log('Layout: Two-story with smaller upper floor');
-      const actualStories = Math.max(stories, 2);
-      const firstFloor = createHouseSection(baseSize, height, baseDepth, 0, height / 2, 0, true, 1);
-      const secondFloor = createHouseSection(baseSize * 0.85, height, baseDepth * 0.85, 0, height + height / 2, 0, true, 2);
-      mainHeight = height * 2;
-      
-    } else if (layoutSeed === 2) {
-      // L-shaped house
-      console.log('Layout: L-shaped');
-      const mainWing = createHouseSection(baseSize, height, baseDepth * 0.6, 0, height / 2, -baseDepth * 0.2);
-      const sideWing = createHouseSection(baseSize * 0.5, height, baseDepth * 0.6, baseSize * 0.25, height / 2, baseDepth * 0.2);
-      mainHeight = height;
-      
-    } else if (layoutSeed === 3) {
-      // Modern split-level
-      console.log('Layout: Split-level');
-      const lowerLevel = createHouseSection(baseSize, height * 0.7, baseDepth * 0.7, 0, height * 0.35, 0);
-      const upperLevel = createHouseSection(baseSize * 0.6, height * 0.5, baseDepth * 0.7, baseSize * 0.2, height * 0.85, 0);
-      mainHeight = height * 1.2;
-      
-    } else {
-      // Angled/rotated modern design
-      console.log('Layout: Angled/rotated modern with', stories, 'stories');
-      
-      // For multi-story angled buildings, create a stable main tower
-      // with an angled wing on the side for architectural interest
-      
-      // Main vertical tower - structurally sound stacked floors
-      for (let floor = 1; floor <= stories; floor++) {
-        const floorY = (floor - 0.5) * height;
-        createHouseSection(baseSize * 0.7, height, baseDepth * 0.7, 0, floorY, 0, true, floor);
-      }
-      
-      // Angled wing on first floor only for visual interest
-      const angleSection = createHouseSection(baseSize * 0.5, height, baseDepth * 0.5, baseSize * 0.4, height * 0.5, baseDepth * 0.4, true, 1);
-      angleSection.rotation.y = Math.PI / 6; // 30 degree rotation
-      
-      mainHeight = height * stories;
-    }
-
-    // Add entry door (always on front) with proper dimensions
-    const doorWidth = 3; // 36 inches standard
-    const doorHeight = 6.67; // 80 inches (6'8")
-    const doorGeometry = new THREE.BoxGeometry(doorWidth, doorHeight, 0.3);
-    const doorMaterial = new THREE.MeshStandardMaterial({ 
-      color: 0x654321, // Brown wood
-      roughness: 0.7,
-      metalness: 0.1
-    });
-    const door = new THREE.Mesh(doorGeometry, doorMaterial);
-    door.position.set(0, doorHeight / 2, baseDepth / 2 + 0.3);
-    houseGroup.add(door);
-    
-    // Door frame
-    const frameThickness = 0.3;
-    const frameMaterial = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      roughness: 0.4
-    });
-    
-    // Top frame
-    const topFrame = new THREE.Mesh(
-      new THREE.BoxGeometry(doorWidth + frameThickness * 2, frameThickness, frameThickness),
-      frameMaterial
-    );
-    topFrame.position.set(0, doorHeight + frameThickness / 2, baseDepth / 2 + 0.25);
-    houseGroup.add(topFrame);
-    
-    // Foundation (if crawlspace)
-    const foundationType = houseParams.foundationType || 'slab';
-    if (foundationType === 'crawlspace') {
-      const foundationHeight = 3; // 3 ft crawlspace
-      const foundationGeometry = new THREE.BoxGeometry(baseSize + 1, foundationHeight, baseDepth + 1);
-      const foundationMaterial = new THREE.MeshStandardMaterial({
-        color: 0x555555, // Dark gray concrete
-        roughness: 0.95
-      });
-      const foundation = new THREE.Mesh(foundationGeometry, foundationMaterial);
-      foundation.position.y = -foundationHeight / 2;
-      foundation.castShadow = true;
-      houseGroup.add(foundation);
-    }
-
-    // Roof based on layout and style with architectural pitch
-    let roof;
-    const roofPitch = houseParams.roofPitch || 6; // Default 6:12 pitch
-    const pitchRatio = roofPitch / 12;
-    const hasEaves = houseParams.hasEaves !== undefined ? houseParams.hasEaves : true;
-    const overhang = hasEaves ? (houseParams.eavesOverhang || 1.5) : 0;
-    
-    // Helper function to create a traditional gabled roof (ridge roof)
-    // A gabled roof has a central ridge beam running lengthwise with two sloped planes
-    const createGabledRoof = (width, depth) => {
-      // Apply overhang to extend horizontally beyond walls on all sides
-      const roofWidth = width + (overhang * 2);
-      const roofDepth = depth + (overhang * 2);
-      
-      console.log(`Gabled roof: width=${width.toFixed(1)} -> ${roofWidth.toFixed(1)}, depth=${depth.toFixed(1)} -> ${roofDepth.toFixed(1)}, overhang=${overhang}`);
-      
-      // For a traditional gabled roof:
-      // - Ridge runs along the length (depth direction, Z-axis)
-      // - Roof slopes down from ridge to eaves on left and right sides (width direction, X-axis)
-      // - Height is based on half the width (rise over run from center to eave)
-      const roofHeight = (roofWidth / 2) * pitchRatio;
-      
-      console.log(`Gabled roof geometry: ridge length=${roofDepth.toFixed(1)}, span=${roofWidth.toFixed(1)}, height=${roofHeight.toFixed(1)}, pitch=${(pitchRatio * 12).toFixed(1)}:12`);
-      
-      // Create custom gabled roof geometry
-      const roofGeom = new THREE.BufferGeometry();
-      
-      const hw = roofWidth / 2;   // half width (left/right from center)
-      const hd = roofDepth / 2;   // half depth (front/back from center)
-      
-      // Vertices:
-      // Ridge beam (2 points at top, running front to back)
-      // Base eaves (4 corners at bottom)
-      const vertices = new Float32Array([
-        // Ridge beam (top center, front to back along Z-axis)
-        0, roofHeight, hd,     // 0: Ridge front
-        0, roofHeight, -hd,    // 1: Ridge back
-        
-        // Base corners (eaves level)
-        -hw, 0, hd,            // 2: Left front eave
-        hw, 0, hd,             // 3: Right front eave
-        hw, 0, -hd,            // 4: Right back eave
-        -hw, 0, -hd,           // 5: Left back eave
-      ]);
-      
-      // Faces (each face is 2 triangles):
-      // - Left slope (2 triangles)
-      // - Right slope (2 triangles)
-      // - Front gable (1 triangle)
-      // - Back gable (1 triangle)
-      const indices = [
-        // Left roof slope (from ridge to left eave)
-        0, 2, 5,    // Front half of left slope
-        0, 5, 1,    // Back half of left slope
-        
-        // Right roof slope (from ridge to right eave)
-        0, 3, 4,    // Front half of right slope
-        0, 4, 1,    // Back half of right slope
-        
-        // Front gable (triangular end)
-        0, 3, 2,    // Front triangle
-        
-        // Back gable (triangular end)
-        1, 5, 4,    // Back triangle
-      ];
-      
-      roofGeom.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-      roofGeom.setIndex(indices);
-      roofGeom.computeVertexNormals();
-      
-      return { geometry: roofGeom, height: roofHeight };
-    };
-    
-    if (houseParams.roofType === 'gabled') {
-      
-      const roofMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x8b4513,
-        roughness: 0.9,
-        side: THREE.DoubleSide  // Render both sides so roof is visible from all angles
-      });
-      
-      // Gabled roof (peaked) - adapted for different layouts
-      if (layoutSeed === 1) {
-        // Two-story - peaked roof sized to upper floor (85% scaled)
-        const upperWidth = baseSize * 0.85;
-        const upperDepth = baseDepth * 0.85;
-        const { geometry: roofGeom, height: roofHeight } = createGabledRoof(upperWidth, upperDepth);
-        roof = new THREE.Mesh(roofGeom, roofMaterial);
-        roof.position.y = mainHeight; // Position base at top of building
-        // Gabled roof is naturally aligned - no rotation needed
-        roof.castShadow = true;
-      } else if (layoutSeed === 2) {
-        // L-shaped - multiple roof sections sized to actual wing dimensions
-        // Main wing is baseSize × (baseDepth * 0.6)
-        const mainWingWidth = baseSize;
-        const mainWingDepth = baseDepth * 0.6;
-        const { geometry: mainRoofGeom, height: mainRoofHeight } = createGabledRoof(mainWingWidth, mainWingDepth);
-        roof = new THREE.Mesh(mainRoofGeom, roofMaterial);
-        roof.position.set(0, mainHeight, -baseDepth * 0.2); // Position base at top of building
-        // Gabled roof is naturally aligned
-        roof.castShadow = true;
-        
-        // Side wing is (baseSize * 0.5) × (baseDepth * 0.6)
-        const sideWingWidth = baseSize * 0.5;
-        const sideWingDepth = baseDepth * 0.6;
-        const { geometry: sideRoofGeom, height: sideRoofHeight } = createGabledRoof(sideWingWidth, sideWingDepth);
-        const sideRoof = new THREE.Mesh(sideRoofGeom, roofMaterial);
-        sideRoof.position.set(baseSize * 0.25, mainHeight, baseDepth * 0.2); // Position base at top of building
-        // Gabled roof is naturally aligned
-        sideRoof.castShadow = true;
-        houseGroup.add(sideRoof);
-      } else if (layoutSeed === 4) {
-        // Angled design - main tower + wing at ground level
-        
-        // Main tower (70% of base dimensions)
-        // Tower is a square box - pyramid corners should point to tower corners
-        const towerWidth = baseSize * 0.7;
-        const towerDepth = baseDepth * 0.7;
-        const { geometry: towerRoofGeom, height: towerRoofHeight } = createGabledRoof(towerWidth, towerDepth);
-        roof = new THREE.Mesh(towerRoofGeom, roofMaterial);
-        roof.position.set(0, mainHeight, 0); // Position base at top of building
-        // Gabled roof is naturally aligned
-        roof.castShadow = true;
-        
-        // Wing building (50% of base dimensions) - single story at ground level, rotated 30°
-        const wingWidth = baseSize * 0.5;
-        const wingDepth = baseDepth * 0.5;
-        const { geometry: wingRoofGeom, height: wingRoofHeight } = createGabledRoof(wingWidth, wingDepth);
-        const wingRoof = new THREE.Mesh(wingRoofGeom, roofMaterial);
-        // Wing building is rotated 30°, gabled roof rotates with it
-        wingRoof.position.set(baseSize * 0.4, height, baseDepth * 0.4); // Position base at top of wing building
-        wingRoof.rotation.y = Math.PI / 6; // Match wing building rotation
-        wingRoof.castShadow = true;
-        houseGroup.add(wingRoof);
+        // Position camera based on backend dimensions
+        sceneManager.positionCamera(
+          houseParams.geometry.maxDimension || 50,
+          houseParams.geometry.totalHeight || 20
+        );
       } else {
-        // Standard peaked roof - proportionate to building footprint
-        const { geometry: roofGeom, height: roofHeight } = createGabledRoof(baseSize, baseDepth);
-        roof = new THREE.Mesh(roofGeom, roofMaterial);
-        roof.position.y = mainHeight; // Position base at top of building
-        // Gabled roof is naturally aligned
-        roof.castShadow = true;
-      }
-    } else {
-      // Flat roof - adapted for different layouts
-      const hasParapet = houseParams.hasParapet || false;
-      const parapetHeight = hasParapet ? 2.5 : 0;
-      
-      if (layoutSeed === 2) {
-        // L-shaped flat roofs
-        const mainRoof = new THREE.BoxGeometry(baseSize + overhang * 2, 0.75, baseDepth * 0.6 + overhang * 2);
-        const roofMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.85 });
-        roof = new THREE.Mesh(mainRoof, roofMat);
-        roof.position.set(0, mainHeight + 0.375, -baseSize * 0.2);
-        roof.castShadow = true;
-        
-        // Parapet for main section
-        if (hasParapet) {
-          const parapetGeometry = new THREE.BoxGeometry(baseSize + overhang * 2 + 0.5, parapetHeight, 0.5);
-          const parapetMat = new THREE.MeshStandardMaterial({ color: 0xe0e0e0, roughness: 0.7 });
-          
-          ['front', 'back', 'left', 'right'].forEach(side => {
-            const parapet = new THREE.Mesh(parapetGeometry, parapetMat);
-            if (side === 'front') parapet.position.set(0, mainHeight + parapetHeight/2, -baseSize * 0.2 - baseSize * 0.3 - overhang);
-            else if (side === 'back') parapet.position.set(0, mainHeight + parapetHeight/2, -baseSize * 0.2 + baseSize * 0.3 + overhang);
-            houseGroup.add(parapet);
-          });
+        console.warn('No geometry provided by backend, falling back to legacy mesh');
+        // FALLBACK: Use legacy mesh if backend doesn't provide geometry yet
+        if (houseParams.mesh) {
+          const legacyMesh = createLegacyMesh(houseParams.mesh);
+          if (legacyMesh) {
+            houseGroup.add(legacyMesh);
+          }
         }
         
-        const sideRoof = new THREE.Mesh(
-          new THREE.BoxGeometry(baseSize * 0.5 + overhang * 2, 0.75, baseDepth * 0.6 + overhang * 2),
-          roofMat
-        );
-        sideRoof.position.set(baseSize * 0.25, mainHeight + 0.375, baseSize * 0.2);
-        sideRoof.castShadow = true;
-        houseGroup.add(sideRoof);
-      } else if (layoutSeed === 4) {
-        // Angled design - two separate rotated flat roofs with parapet
-        const roofMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.85 });
-        
-        // Main section roof (rotated 22.5 degrees) - match building size
-        const mainRoof = new THREE.Mesh(
-          new THREE.BoxGeometry(baseSize + overhang * 2, 0.75, baseDepth * 0.7 + overhang * 2),
-          roofMat
-        );
-        mainRoof.position.set(0, mainHeight + 0.375, 0);
-        mainRoof.rotation.y = Math.PI / 8; // Match main section rotation
-        mainRoof.castShadow = true;
-        houseGroup.add(mainRoof);
-        
-        // Angled section roof (rotated -30 degrees) - match building size
-        roof = new THREE.Mesh(
-          new THREE.BoxGeometry(baseSize * 0.6 + overhang * 2, 0.75, baseDepth * 0.5 + overhang * 2),
-          roofMat
-        );
-        roof.position.set(baseSize * 0.3, mainHeight * 0.8 + 0.375, baseSize * 0.3);
-        roof.rotation.y = -Math.PI / 6; // Match angle section rotation
-        roof.castShadow = true;
-      } else {
-        // Standard flat roof with parapet
-        const roofGeometry = new THREE.BoxGeometry(baseSize + overhang * 2, 0.75, baseDepth + overhang * 2);
-        const roofMaterial = new THREE.MeshStandardMaterial({ 
-          color: 0x333333,
-          roughness: 0.85
-        });
-        roof = new THREE.Mesh(roofGeometry, roofMaterial);
-        roof.position.y = mainHeight + 0.375;
-        roof.castShadow = true;
-        
-        // Add parapet (low wall around perimeter) for modern flat roofs
-        if (hasParapet) {
-          const parapetMaterial = new THREE.MeshStandardMaterial({
-            color: 0xe0e0e0,
-            roughness: 0.7
-          });
-          
-          const parapetThickness = 0.5;
-          
-          // Front parapet
-          const frontParapet = new THREE.Mesh(
-            new THREE.BoxGeometry(baseSize + overhang * 2, parapetHeight, parapetThickness),
-            parapetMaterial
-          );
-          frontParapet.position.set(0, mainHeight + parapetHeight / 2, baseDepth / 2 + overhang);
-          houseGroup.add(frontParapet);
-          
-          // Back parapet
-          const backParapet = new THREE.Mesh(
-            new THREE.BoxGeometry(baseSize + overhang * 2, parapetHeight, parapetThickness),
-            parapetMaterial
-          );
-          backParapet.position.set(0, mainHeight + parapetHeight / 2, -baseDepth / 2 - overhang);
-          houseGroup.add(backParapet);
-          
-          // Left parapet
-          const leftParapet = new THREE.Mesh(
-            new THREE.BoxGeometry(parapetThickness, parapetHeight, baseDepth + overhang * 2),
-            parapetMaterial
-          );
-          leftParapet.position.set(-baseSize / 2 - overhang, mainHeight + parapetHeight / 2, 0);
-          houseGroup.add(leftParapet);
-          
-          // Right parapet
-          const rightParapet = new THREE.Mesh(
-            new THREE.BoxGeometry(parapetThickness, parapetHeight, baseDepth + overhang * 2),
-            parapetMaterial
-          );
-          rightParapet.position.set(baseSize / 2 + overhang, mainHeight + parapetHeight / 2, 0);
-          houseGroup.add(rightParapet);
-        }
-      }
-    }
-    if (roof) houseGroup.add(roof);
-
-    // Add interior walls based on room layout
-    if (houseParams.rooms && houseParams.rooms.length > 0) {
-      console.log(`Creating interior walls: ${houseParams.rooms.length} rooms, layout ${layoutSeed}`);
-      createInteriorWalls(houseParams.rooms);
-    }
-
-    // Camera position - adjusted for building size and height
-    // FIXED: Use actual roof calculation for accurate camera positioning
-    const roofWidthWithOverhang = baseSize + (overhang * 2);
-    const roofDepthWithOverhang = baseDepth + (overhang * 2);
-    const estimatedRoofHeight = houseParams.roofType === 'gabled' ? 
-      Math.sqrt(Math.pow(roofWidthWithOverhang / 2, 2) + Math.pow(roofDepthWithOverhang / 2, 2)) * pitchRatio : 0;
-    const buildingTopHeight = mainHeight + estimatedRoofHeight;
-    
-    const distance = Math.max(baseSize * 2.2, 60); // Ensure minimum viewing distance
-    camera.position.set(distance, buildingTopHeight * 0.8, distance);
-    camera.lookAt(0, buildingTopHeight * 0.4, 0);
-
-    // Animation
-    const animate = () => {
-      frameId = requestAnimationFrame(animate);
-      
-      // Slowly rotate the entire house group
-      if (meshRef.current) {
-        meshRef.current.rotation.y += 0.003;
+        // Position camera for legacy mesh
+        const buildingSize = Math.sqrt(houseParams.lotSize);
+        sceneManager.positionCamera(buildingSize, buildingSize * 0.5);
       }
       
-      renderer.render(scene, camera);
-    };
-    animate();
-
-    // Handle window resize
-    handleResize = () => {
-      if (!mountRef.current) return;
-      const width = mountRef.current.clientWidth;
-      camera.aspect = width / canvasHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(width, canvasHeight);
-    };
-    window.addEventListener('resize', handleResize);
-
+      // Animation loop
+      const animate = () => {
+        frameId = requestAnimationFrame(animate);
+        houseGroup.rotation.y += 0.003;
+        sceneManager.render();
+      };
+      animate();
+      
+      // Resize handler
+      const handleResize = () => {
+        if (!mountRef.current) return;
+        const width = mountRef.current.clientWidth;
+        sceneManager.resize(width, 400);
+      };
+      window.addEventListener('resize', handleResize);
+      
+      // Cleanup
+      return () => {
+        if (frameId) cancelAnimationFrame(frameId);
+        window.removeEventListener('resize', handleResize);
+        DisposalManager.dispose(sceneManager.scene);
+        sceneManager.dispose();
+      };
+      
     } catch (error) {
       console.error('HouseViewer3D: Error during initialization', error);
       // Display error in the component
@@ -878,19 +103,6 @@ export default function HouseViewer3D({ houseParams }) {
         `;
       }
     }
-    
-    // Cleanup (outside try-catch)
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      if (frameId) cancelAnimationFrame(frameId);
-      if (mountRef.current && rendererRef.current?.domElement) {
-        // Check if the canvas is actually a child before removing
-        if (mountRef.current.contains(rendererRef.current.domElement)) {
-          mountRef.current.removeChild(rendererRef.current.domElement);
-        }
-      }
-      if (rendererRef.current) rendererRef.current.dispose();
-    };
   }, [houseParams]);
 
   if (!houseParams) {
@@ -938,4 +150,47 @@ export default function HouseViewer3D({ houseParams }) {
       </p>
     </div>
   );
+}
+
+/**
+ * Legacy mesh renderer - TEMPORARY fallback for gradual migration
+ */
+function createLegacyMesh(meshData) {
+  if (!meshData || !meshData.vertices || !meshData.faces) {
+    console.warn('Invalid legacy mesh data');
+    return null;
+  }
+
+  try {
+    const geometry = new THREE.BufferGeometry();
+    
+    // Convert vertices
+    const vertices = new Float32Array(meshData.vertices.length * 3);
+    meshData.vertices.forEach((vertex, i) => {
+      vertices[i * 3] = vertex.x;
+      vertices[i * 3 + 1] = vertex.y;
+      vertices[i * 3 + 2] = vertex.z;
+    });
+    geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+    
+    // Convert faces
+    const indices = [];
+    meshData.faces.forEach(face => {
+      indices.push(face.a, face.b, face.c);
+    });
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    
+    // Create material
+    const material = new THREE.MeshStandardMaterial({
+      color: meshData.color || 0xffffff,
+      roughness: 0.7,
+      side: THREE.DoubleSide
+    });
+    
+    return new THREE.Mesh(geometry, material);
+  } catch (error) {
+    console.error('Error creating legacy mesh:', error);
+    return null;
+  }
 }

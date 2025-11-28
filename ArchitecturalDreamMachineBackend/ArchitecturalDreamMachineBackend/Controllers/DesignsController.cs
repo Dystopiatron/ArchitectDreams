@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using ArchitecturalDreamMachineBackend.Data;
 using ArchitecturalDreamMachineBackend.Geometry;
 using ArchitecturalDreamMachineBackend.Export;
+using ArchitecturalDreamMachineBackend.Services;
 
 namespace ArchitecturalDreamMachineBackend.Controllers;
 
@@ -12,11 +13,16 @@ public class DesignsController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly ILogger<DesignsController> _logger;
+    private readonly DesignOrchestrationService _orchestrationService;
 
-    public DesignsController(AppDbContext context, ILogger<DesignsController> logger)
+    public DesignsController(
+        AppDbContext context, 
+        ILogger<DesignsController> logger,
+        DesignOrchestrationService orchestrationService)
     {
         _context = context;
         _logger = logger;
+        _orchestrationService = orchestrationService;
     }
 
     [HttpPost("generate")]
@@ -65,7 +71,8 @@ public class DesignsController : ControllerBase
 
             // Calculate architectural dimensions
             var desiredBuildingSqFt = request.LotSize;
-            var stories = styleTemplate.TypicalStories;
+            // Use override if provided, otherwise use style template default
+            var stories = request.StoriesOverride ?? styleTemplate.TypicalStories;
             var footprintSqFt = desiredBuildingSqFt / stories;
             
             // Rectangular footprint (1.5:1 aspect ratio)
@@ -96,7 +103,8 @@ public class DesignsController : ControllerBase
                 // Architectural parameters
                 CeilingHeight = styleTemplate.TypicalCeilingHeight,
                 Stories = stories,
-                BuildingShape = styleTemplate.BuildingShape,
+                // Use override if provided, otherwise use style template default
+                BuildingShape = request.BuildingShapeOverride ?? styleTemplate.BuildingShape,
                 WindowToWallRatio = styleTemplate.WindowToWallRatio,
                 FoundationType = styleTemplate.FoundationType,
                 ExteriorMaterial = styleTemplate.ExteriorMaterial,
@@ -122,11 +130,15 @@ public class DesignsController : ControllerBase
             _logger.LogInformation("Created design with ID {DesignId} using style {StyleName}", 
                 design.Id, styleTemplate.Name);
 
-            // Return HouseParameters with mesh
+            // NEW: Generate complete geometry on backend
+            var geometry = _orchestrationService.GenerateCompleteGeometry(houseParameters);
+
+            // Return HouseParameters with mesh AND complete geometry
             return Ok(new
             {
                 houseParameters,
                 mesh = houseParameters.GenerateMesh(),
+                geometry, // NEW: Complete geometry ready for Three.js
                 designId = design.Id,
                 styleName = styleTemplate.Name
             });
@@ -596,4 +608,8 @@ public class GenerateRequest
 {
     public double LotSize { get; set; }
     public string StylePrompt { get; set; } = string.Empty;
+    
+    // Optional overrides
+    public string? BuildingShapeOverride { get; set; }
+    public int? StoriesOverride { get; set; }
 }

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ArchitecturalDreamMachineBackend.Data;
+using ArchitecturalDreamMachineBackend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,6 +8,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Register geometry and orchestration services
+builder.Services.AddScoped<GeometryService>();
+builder.Services.AddScoped<LayoutService>();
+builder.Services.AddScoped<RoofService>();
+builder.Services.AddScoped<DesignOrchestrationService>();
 
 // Configure CORS for React Native frontend
 builder.Services.AddCors(options =>
