@@ -347,9 +347,10 @@ Get all designs.
 ## Support
 
 For issues or questions:
-1. Check the README files in each project directory
-2. Review test files for usage examples
-3. Inspect browser console (frontend) or terminal output (backend)
+1. Check [BACKEND_API.md](ArchitecturalDreamMachineBackend/BACKEND_API.md) for backend details
+2. Check [FRONTEND_3D_CLIENT.md](ArchitecturalDreamMachineFrontend/FRONTEND_3D_CLIENT.md) for frontend details
+3. Review test files for usage examples
+4. Inspect browser console (frontend) or terminal output (backend)
 
 ## Development Tips
 

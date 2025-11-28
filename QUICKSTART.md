@@ -1,59 +1,50 @@
-# Quick Start - Get Running in 2 Minutes
+# Quick Start Guide
 
-## Step 1: Start Backend
+## Prerequisites
+- .NET 8 SDK installed
+- Node.js 18+ installed
 
-Open a terminal:
+## 3 Steps to Run
 
+### 1. Start Backend
 ```bash
-cd /Users/groundcontrol/Desktop/ArchitectCode/ArchitecturalDreamMachineBackend/ArchitecturalDreamMachineBackend
+cd ArchitecturalDreamMachineBackend/ArchitecturalDreamMachineBackend
 dotnet run
 ```
+✅ Wait for: `Now listening on: http://localhost:5095`
 
-✅ **Wait for:** `Now listening on: http://localhost:5095`
-
-## Step 2: Start Frontend
-
-Open a **NEW** terminal:
-
+### 2. Start Frontend (New Terminal)
 ```bash
-cd /Users/groundcontrol/Desktop/ArchitectCode/ArchitecturalDreamMachineFrontend
+cd ArchitecturalDreamMachineFrontend
 npx expo start
 ```
+✅ Press **'w'** to open in browser
 
-✅ **Press 'w'** when menu appears
-
-## Step 3: Test It
-
-In your browser:
-
+### 3. Generate a Design
 1. Lot size: `2500`
 2. Style: `modern glass house`
 3. Click **Generate Design**
-4. See your 3D house spin! 🏠✨
+4. Watch your 3D house rotate! 🏠
 
----
+## Troubleshooting
 
-## Common Issues
+**Backend won't start?**
+- Verify .NET 8 SDK: `dotnet --version`
+- Check port 5095 not in use
 
-### ❌ "Cannot connect to backend"
-- Make sure backend terminal shows "Now listening on: http://localhost:5095"
-- Try: http://localhost:5095/swagger in browser
+**Frontend won't load?**
+- Clear cache: `npx expo start --clear`
+- Try different browser (Chrome recommended)
 
-### ❌ "Expo won't start"
-- Try: `npx expo start --clear`
+**Can't connect?**
+- Verify backend shows "Now listening on: http://localhost:5095"
+- Visit http://localhost:5095/swagger to test
 
-### ❌ "Can't scroll the page"
-- Refresh your browser (this was fixed!)
+## What's Included
 
----
+✅ 3 built-in architectural styles (Modern, Victorian, Brutalist)  
+✅ 5 different building layouts (cube, L-shape, two-story, split-level, angled)  
+✅ Rotating 3D models in browser  
+✅ OBJ file export for AutoCAD/Blender/Revit  
 
-## What Works Now
-
-✅ Generate designs with AI-powered style matching  
-✅ View rotating 3D models in browser  
-✅ Download OBJ files for AutoCAD/Blender/Revit  
-✅ Three built-in styles (Modern, Victorian, Brutalist)  
-
----
-
-**Need more help?** See [USER_GUIDE.md](USER_GUIDE.md) for complete instructions!
+**Next:** See [USER_GUIDE.md](USER_GUIDE.md) for detailed features and [HOUSE_LAYOUTS.md](HOUSE_LAYOUTS.md) to understand layout varieties.

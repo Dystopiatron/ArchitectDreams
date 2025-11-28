@@ -13,62 +13,16 @@ A simple app that turns your ideas into 3D house designs. Type what you want, se
 
 ---
 
-## Quick Start (5 Minutes)
+## Quick Start
 
-### Step 1: Start the Backend (The Brain)
+See **[QUICKSTART.md](QUICKSTART.md)** for the 2-minute setup guide.
 
-Open a terminal window:
-
-```bash
-cd /Users/groundcontrol/Desktop/ArchitectCode/ArchitecturalDreamMachineBackend/ArchitecturalDreamMachineBackend
-dotnet run
-```
-
-**Wait for this message:** `Now listening on: http://localhost:5095`
-
-Leave this window open - the backend must keep running!
-
-### Step 2: Start the Frontend (The Face)
-
-Open a **NEW** terminal window:
-
-```bash
-cd /Users/groundcontrol/Desktop/ArchitectCode/ArchitecturalDreamMachineFrontend
-npx expo start
-```
-
-**Press 'w'** when you see the menu → Opens in your web browser
-
-**That's it!** The app is now running at http://localhost:8081
-
-### Step 3: Create Your First Design
-
-1. Enter lot size: `2500` (this is square feet)
-2. Enter style: `modern glass house` (or try `victorian` or `brutalist`)
+Once running, create your first design:
+1. Lot size: `2500` (square feet)
+2. Style: `modern glass house` or `victorian` or `brutalist`
 3. Click **"Generate Design"**
-4. Watch your 3D house appear and rotate!
-5. Click **"Download OBJ File"** to get a file for professional software
-
----
-
-## Understanding the Parts
-
-### What is the Backend?
-Think of it as the brain - it:
-- Understands your style descriptions
-- Calculates house dimensions
-- Generates 3D geometry
-- Saves your designs to a database
-
-### What is the Frontend?
-Think of it as the face - it:
-- Shows you input boxes
-- Displays the rotating 3D model
-- Lets you download files
-- Works in your web browser
-
-### What is a Database?
-A file on your computer (`architecturaldreammachine.db`) that remembers all the designs you've created.
+4. Watch your 3D house appear and rotate
+5. Click **"Download OBJ File"** for use in AutoCAD/Blender/Revit
 
 ---
 
@@ -144,46 +98,19 @@ The app looks for keywords in what you type:
 - **Scrolling:** Scroll normally to see design details below
 - Currently view-only (mouse controls coming in future updates)
 
-### Layout Variety Details
-
-Want to understand the different layouts better? See **[HOUSE_LAYOUTS.md](HOUSE_LAYOUTS.md)** for:
-- Detailed description of each layout type
-- Best use cases for each design
-- How to get specific layouts consistently
-- Style + Layout combinations
+**Understanding Layouts:** See **[HOUSE_LAYOUTS.md](HOUSE_LAYOUTS.md)** for complete details on all 5 layout types and how to get specific designs.
 
 ---
 
 ## Downloading Your Design
 
-### What is an OBJ File?
+The OBJ file export works with all major 3D software:
+- **Blender** (free) - File → Import → Wavefront (.obj)
+- **AutoCAD** - Insert → Import → Select OBJ
+- **SketchUp** - File → Import → 3D Model
+- **Revit** - Import to create detailed BIM models
 
-An OBJ file is a universal 3D model format that works with:
-- **AutoCAD** - Industry standard for blueprints
-- **Revit** - Building Information Modeling (BIM)
-- **Blender** - Free 3D modeling software
-- **SketchUp** - Easy architectural design
-- Almost all professional 3D software!
-
-### How to Use the Downloaded File
-
-**In Blender (Free):**
-1. Download from blender.org
-2. Open Blender
-3. File → Import → Wavefront (.obj)
-4. Select your downloaded file
-5. Add details, textures, render images
-
-**In AutoCAD:**
-1. Open AutoCAD
-2. Insert → Import
-3. Select the OBJ file
-4. Create technical blueprints
-
-**In SketchUp:**
-1. Open SketchUp
-2. File → Import → 3D Model
-3. Modify and detail your design
+See **[3D_FEATURES_GUIDE.md](3D_FEATURES_GUIDE.md)** for detailed import instructions.
 
 ---
 
@@ -225,101 +152,49 @@ An OBJ file is a universal 3D model format that works with:
 - Don't use `npx expo start --ios`
 - Use `npx expo start` then press **'w'** for web
 
----
+## Technical Details
 
-## Technical Details (For the Curious)
+**Stack:**
+- Backend: C# / ASP.NET Core 8.0 / SQLite
+- Frontend: React Native / Three.js / Expo
 
-### How Big is the House?
+**Dimensions:**
+- 2500 sq ft = 50ft × 50ft base, 30ft tall
+- Scaling is proportional
+- Database: `architecturaldreammachine.db` (SQLite)
 
-- **Lot size 2500 sq ft** = 50ft × 50ft base
-- **Height** = 30ft (60% of base)
-- **With gabled roof** = 40ft total height
-- All measurements scale proportionally!
-
-### What Languages/Tools?
-
-**Backend:**
-- C# programming language
-- ASP.NET Core framework
-- SQLite database
-- .NET 8
-
-**Frontend:**
-- JavaScript programming language
-- React Native framework
-- Three.js for 3D graphics
-- Expo development tools
-
-### Where is Data Stored?
-
-- Database file: `architecturaldreammachine.db`
-- Location: Same folder as the backend
-- Contains: Your designs and 3 style templates
-- Can be deleted to start fresh
-
-### Can I Run This on My Phone?
-
-Currently optimized for web browser on computer. Mobile app features coming in future updates!
-
----
-
-## Next Steps
-
-### For Casual Users
-- Try different style combinations
-- Experiment with lot sizes
-- Download OBJ files and explore in Blender (free)
-
-### For Developers
-- Add new style templates in `AppDbContext.cs`
-- Customize 3D rendering in `HouseViewer3D.js`
-- Add new material textures
-- Implement advanced roof types
-
-### Future Features (Planned)
-- Mouse controls to rotate 3D view manually
-- More style templates
-- Interior room layouts
-- Floor plan generation
-- PDF blueprint export
-- Better AI for understanding style descriptions
-
----
+See **[GETTING_STARTED.md](GETTING_STARTED.md)** for architecture details.
 
 ## Common Questions
 
-**Q: Do I need to know programming?**
-A: No! Just follow the Quick Start section.
+**Do I need programming knowledge?** No, just follow the Quick Start guide.
 
-**Q: Is this free?**
-A: Yes, completely free to use.
+**Is this free?** Yes, completely free to use. Generated designs are yours.
 
-**Q: Can I use the designs commercially?**
-A: Yes, generated designs are yours to use.
+**Can I add more styles?** Yes - developers can add styles in `AppDbContext.cs`.
 
-**Q: How do I add more styles?**
-A: Currently requires editing code - easier method coming soon!
+**Does it work offline?** Yes, runs entirely on your local machine.
 
-**Q: Does it work offline?**
-A: Backend and frontend must run on your computer, but no internet needed.
+**Can multiple people use it?** Yes, one backend can serve multiple browsers.
 
-**Q: Can multiple people use it at once?**
-A: One backend can serve multiple browsers - share the link!
+## For Developers
 
----
+Want to customize or extend? See **[GETTING_STARTED.md](GETTING_STARTED.md)** for:
+- Project structure and architecture
+- How to add new style templates
+- Customizing 3D rendering
+- Testing and debugging
 
-## Getting Help
+## Troubleshooting
 
-If something isn't working:
+**Not working?** Try these steps:
+1. Check both terminals are running (backend + frontend)
+2. Refresh your browser
+3. Clear cache: `npx expo start --clear`
+4. Restart backend: Ctrl+C, then `dotnet run`
 
-1. **Check both terminals are running** (backend + frontend)
-2. **Try refreshing your browser**
-3. **Clear Expo cache:** `npx expo start --clear`
-4. **Restart backend:** Stop with Ctrl+C, then `dotnet run` again
-5. **Check the detailed guides:** See GETTING_STARTED.md for technical details
+For detailed troubleshooting, see **[GETTING_STARTED.md](GETTING_STARTED.md)**.
 
 ---
 
-**Ready to design your dream house?** 🏗️✨
-
-Just remember: Backend first, frontend second, press 'w', and start creating!
+**Ready to design!** Start backend, start frontend, press 'w', and create. 🏗️✨

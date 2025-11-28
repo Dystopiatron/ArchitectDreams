@@ -30,10 +30,16 @@ npx expo start
 
 ## 📚 Documentation
 
-- **[USER_GUIDE.md](USER_GUIDE.md)** - Complete guide for everyone (start here!)
-- **[QUICKSTART.md](QUICKSTART.md)** - 5-minute setup guide
-- **[3D_FEATURES_GUIDE.md](3D_FEATURES_GUIDE.md)** - 3D viewer and OBJ export details
-- **[GETTING_STARTED.md](GETTING_STARTED.md)** - Detailed technical setup
+**New Users:**
+- **[QUICKSTART.md](QUICKSTART.md)** - Get running in 2 minutes
+- **[USER_GUIDE.md](USER_GUIDE.md)** - Complete walkthrough with examples
+
+**Developers:**
+- **[GETTING_STARTED.md](GETTING_STARTED.md)** - Technical setup and architecture
+- **[BACKEND_API.md](ArchitecturalDreamMachineBackend/BACKEND_API.md)** - Backend API documentation
+- **[FRONTEND_3D_CLIENT.md](ArchitecturalDreamMachineFrontend/FRONTEND_3D_CLIENT.md)** - Frontend 3D client
+- **[HOUSE_LAYOUTS.md](HOUSE_LAYOUTS.md)** - Understanding the 5 layout types
+- **[3D_FEATURES_GUIDE.md](3D_FEATURES_GUIDE.md)** - 3D viewer and OBJ export
 
 ---
 
