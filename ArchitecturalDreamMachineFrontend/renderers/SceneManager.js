@@ -22,7 +22,7 @@ export class SceneManager {
   }
 
   _initScene() {
-    this.scene.background = new THREE.Color(0xf0f0f0);
+    this.scene.background = new THREE.Color(0x1a1a1a); // Dark background to match UI
   }
 
   _initRenderer() {

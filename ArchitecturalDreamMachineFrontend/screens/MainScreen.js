@@ -269,7 +269,7 @@ export default function MainScreen() {
 
 const styles = StyleSheet.create({
   scrollView: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#1a1a1a', // Dark background
     ...(Platform.OS === 'web' && {
       flex: undefined, // Remove flex on web
       height: '100vh',
@@ -286,21 +286,21 @@ const styles = StyleSheet.create({
   headerText: {
     fontSize: 26,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#e0e0e0', // Light text
     textAlign: 'center',
   },
   subHeaderText: {
     fontSize: 14,
-    color: '#666',
+    color: '#b0b0b0', // Muted light text
     marginTop: 5,
   },
   inputContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: '#2a2a2a', // Dark card
     padding: 20,
     borderRadius: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 3,
     marginBottom: 20,
@@ -308,23 +308,24 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: '#e0e0e0', // Light text
     marginBottom: 8,
     marginTop: 10,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#444',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#fafafa',
+    backgroundColor: '#333', // Dark input
+    color: '#e0e0e0', // Light text
   },
   pickerContainer: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#444',
     borderRadius: 8,
-    backgroundColor: '#fafafa',
+    backgroundColor: '#333', // Dark picker
     overflow: 'hidden',
   },
   picker: {
@@ -332,7 +333,8 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     border: 'none',
-    backgroundColor: '#fafafa',
+    backgroundColor: '#333', // Dark picker
+    color: '#e0e0e0', // Light text
     cursor: 'pointer',
   },
   button: {
@@ -359,36 +361,36 @@ const styles = StyleSheet.create({
   infoContainer: {
     marginTop: 15,
     padding: 15,
-    backgroundColor: '#e8f5e9',
+    backgroundColor: '#2a3a2a', // Dark green-ish
     borderRadius: 8,
     borderLeftWidth: 4,
-    borderLeftColor: '#4caf50',
+    borderLeftColor: '#66bb6a', // Lighter green accent
   },
   infoText: {
     fontSize: 14,
-    color: '#2e7d32',
+    color: '#a5d6a7', // Light green text
     marginVertical: 2,
     fontWeight: '500',
   },
   resultContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: '#2a2a2a', // Dark card
     borderRadius: 10,
     padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 3,
   },
   resultTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#e0e0e0', // Light text
     marginBottom: 15,
     textAlign: 'center',
   },
   paramCard: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#333', // Dark card background
     padding: 15,
     borderRadius: 8,
     marginBottom: 10,
@@ -399,24 +401,24 @@ const styles = StyleSheet.create({
   paramLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#555',
+    color: '#b0b0b0', // Light gray text
   },
   paramValue: {
     fontSize: 16,
-    color: '#007AFF',
+    color: '#64b5f6', // Softer blue
     fontWeight: '500',
   },
   dimensionsCard: {
-    backgroundColor: '#fff3cd',
+    backgroundColor: '#3a3a2a', // Dark yellow-ish
     padding: 15,
     borderRadius: 8,
     marginTop: 5,
     borderLeftWidth: 4,
-    borderLeftColor: '#ffc107',
+    borderLeftColor: '#ffb300', // Amber accent
   },
   dimensionText: {
     fontSize: 14,
-    color: '#856404',
+    color: '#ffd54f', // Light amber text
     marginTop: 5,
   },
   viewer3DContainer: {
@@ -424,7 +426,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     overflow: 'hidden',
     borderWidth: 2,
-    borderColor: '#007AFF',
+    borderColor: '#64b5f6', // Softer blue border
   },
   downloadButton: {
     backgroundColor: '#4caf50',
@@ -442,10 +444,10 @@ const styles = StyleSheet.create({
   },
   note: {
     fontSize: 13,
-    color: '#666',
+    color: '#90caf9', // Light blue text
     marginTop: 20,
     padding: 15,
-    backgroundColor: '#e3f2fd',
+    backgroundColor: '#2a2a3a', // Dark blue-ish
     borderRadius: 8,
     textAlign: 'center',
     lineHeight: 20,
