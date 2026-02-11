@@ -11,6 +11,12 @@ export default function HouseViewer3D({ houseParams }) {
   const houseGroupRef = useRef(null);
   const cameraControllerRef = useRef(null);
   const [autoRotate, setAutoRotate] = useState(true);
+  const autoRotateRef = useRef(true);
+
+  // Sync ref with state to avoid stale closure in animation loop
+  useEffect(() => {
+    autoRotateRef.current = autoRotate;
+  }, [autoRotate]);
 
   useEffect(() => {
     if (!mountRef.current || !houseParams) {
@@ -139,8 +145,8 @@ export default function HouseViewer3D({ houseParams }) {
       const animate = () => {
         frameId = requestAnimationFrame(animate);
         
-        // Auto-rotate if enabled
-        if (autoRotate) {
+        // Auto-rotate if enabled (use ref to avoid stale closure)
+        if (autoRotateRef.current) {
           houseGroup.rotation.y += 0.003;
         }
         
@@ -180,13 +186,24 @@ export default function HouseViewer3D({ houseParams }) {
       console.error('HouseViewer3D: Error during initialization', error);
       // Display error in the component
       if (mountRef.current) {
-        mountRef.current.innerHTML = `
-          <div style="padding: 20px; background: #ffebee; border-radius: 8px; color: #c62828;">
-            <h3>3D Viewer Error</h3>
-            <p>${error.message}</p>
-            <pre style="font-size: 11px; overflow: auto;">${error.stack}</pre>
-          </div>
-        `;
+        // Use textContent instead of innerHTML to prevent XSS
+        const container = mountRef.current;
+        container.innerHTML = '';
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = 'padding: 20px; background: #ffebee; border-radius: 8px; color: #c62828;';
+        const heading = document.createElement('h3');
+        heading.textContent = '3D Viewer Error';
+        errorDiv.appendChild(heading);
+        const msg = document.createElement('p');
+        msg.textContent = error.message;
+        errorDiv.appendChild(msg);
+        if (typeof __DEV__ !== 'undefined' && __DEV__) {
+          const stack = document.createElement('pre');
+          stack.style.cssText = 'font-size: 11px; overflow: auto;';
+          stack.textContent = error.stack;
+          errorDiv.appendChild(stack);
+        }
+        container.appendChild(errorDiv);
       }
     }
   }, [houseParams]);

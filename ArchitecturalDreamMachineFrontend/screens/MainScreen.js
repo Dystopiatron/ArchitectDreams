@@ -10,9 +10,8 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import HouseViewer3D from '../components/HouseViewer3D';
-
-// Replace with your local IP if testing on physical device
-const API_BASE_URL = 'http://localhost:5095';
+import { CrossPlatformPicker } from '../components/CrossPlatformPicker';
+import { config } from '../config/api';
 
 export default function MainScreen() {
   const [lotSize, setLotSize] = useState('');
@@ -30,7 +29,7 @@ export default function MainScreen() {
 
     try {
       const response = await axios.get(
-        `${API_BASE_URL}/api/designs/${designInfo.designId}/export`,
+        config.endpoints.export(designInfo.designId),
         { responseType: 'blob' }
       );
 
@@ -82,7 +81,7 @@ export default function MainScreen() {
         requestData.storiesOverride = parseInt(stories);
       }
       
-      const response = await axios.post(`${API_BASE_URL}/api/designs/generate`, requestData);
+      const response = await axios.post(config.endpoints.generate, requestData);
 
       // Get parameters from backend (already has overrides applied)
       const params = { ...response.data.houseParameters };
@@ -103,7 +102,7 @@ export default function MainScreen() {
       if (error.response?.data?.error) {
         setErrorMessage(error.response.data.error);
       } else if (error.message.includes('Network Error') || error.message.includes('ECONNREFUSED')) {
-        setErrorMessage('Cannot connect to backend. Make sure the API is running at ' + API_BASE_URL);
+        setErrorMessage('Cannot connect to backend. Make sure the API is running at ' + config.API_BASE_URL);
       } else {
         setErrorMessage('Failed to generate design. Please try again.');
       }
@@ -142,36 +141,39 @@ export default function MainScreen() {
             onChangeText={setStylePrompt}
             placeholder="e.g., Modern minimalist, Victorian, Brutalist"
             multiline
+            maxLength={500}
           />
 
           <Text style={styles.label}>Building Layout:</Text>
           <View style={styles.pickerContainer}>
-            <select 
-              style={styles.picker}
+            <CrossPlatformPicker
               value={layoutType}
-              onChange={(e) => setLayoutType(e.target.value)}
-            >
-              <option value="auto">🎲 Auto (Based on Lot Size)</option>
-              <option value="cube">🟦 Traditional Cube</option>
-              <option value="two-story">🏢 Two-Story (Compact Upper)</option>
-              <option value="l-shape">🔲 L-Shaped</option>
-              <option value="split-level">📐 Split-Level</option>
-              <option value="angled">↗️ Angled Modern</option>
-            </select>
+              onValueChange={setLayoutType}
+              pickerStyle={styles.picker}
+              items={[
+                { value: 'auto', label: '🎲 Auto (Based on Lot Size)' },
+                { value: 'cube', label: '🟦 Traditional Cube' },
+                { value: 'two-story', label: '🏢 Two-Story (Compact Upper)' },
+                { value: 'l-shape', label: '🔲 L-Shaped' },
+                { value: 'split-level', label: '📐 Split-Level' },
+                { value: 'angled', label: '↗️ Angled Modern' },
+              ]}
+            />
           </View>
 
           <Text style={styles.label}>Number of Stories:</Text>
           <View style={styles.pickerContainer}>
-            <select 
-              style={styles.picker}
+            <CrossPlatformPicker
               value={stories}
-              onChange={(e) => setStories(e.target.value)}
-            >
-              <option value="auto">🎲 Auto (Based on Style)</option>
-              <option value="1">1️⃣ Single Story</option>
-              <option value="2">2️⃣ Two Stories</option>
-              <option value="3">3️⃣ Three Stories</option>
-            </select>
+              onValueChange={setStories}
+              pickerStyle={styles.picker}
+              items={[
+                { value: 'auto', label: '🎲 Auto (Based on Style)' },
+                { value: '1', label: '1️⃣ Single Story' },
+                { value: '2', label: '2️⃣ Two Stories' },
+                { value: '3', label: '3️⃣ Three Stories' },
+              ]}
+            />
           </View>
 
           <TouchableOpacity
