@@ -6,6 +6,7 @@ using FluentValidation.AspNetCore;
 using ArchitecturalDreamMachineBackend.Data;
 using ArchitecturalDreamMachineBackend.Export;
 using ArchitecturalDreamMachineBackend.Services;
+using ArchitecturalDreamMachineBackend.Middleware;
 using ArchitecturalDreamMachineBackend.Validators;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -116,6 +117,7 @@ else
 }
 
 app.UseHttpsRedirection();
+app.UseMiddleware<ApiKeyMiddleware>();
 app.UseRateLimiter();
 app.UseCors();
 app.MapControllers();

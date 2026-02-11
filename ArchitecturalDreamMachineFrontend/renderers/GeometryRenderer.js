@@ -12,25 +12,42 @@ export class GeometryRenderer {
    */
   static createMeshFromGeometry(geometryData) {
     if (!geometryData || !geometryData.vertices || !geometryData.indices) {
-      console.error('❌ Invalid geometry data:', geometryData);
+      console.error('Invalid geometry data:', geometryData);
       return null;
     }
 
-    console.log('🔨 Creating mesh:', {
-      vertexCount: geometryData.vertices.length / 3,
-      faceCount: geometryData.indices.length / 3,
-      material: geometryData.materialType,
-      color: geometryData.color
-    });
+    // Bounds checking to prevent memory exhaustion from malformed data
+    const MAX_VERTICES = 300000; // 100,000 vertices * 3 components
+    const MAX_INDICES = 300000;
+    if (geometryData.vertices.length > MAX_VERTICES) {
+      console.error('Geometry exceeds max vertex limit:', geometryData.vertices.length);
+      return null;
+    }
+    if (geometryData.indices.length > MAX_INDICES) {
+      console.error('Geometry exceeds max index limit:', geometryData.indices.length);
+      return null;
+    }
+    if (geometryData.vertices.length % 3 !== 0) {
+      console.error('Vertex array length not divisible by 3:', geometryData.vertices.length);
+      return null;
+    }
+
+    const vertexCount = geometryData.vertices.length / 3;
+    for (let i = 0; i < geometryData.indices.length; i++) {
+      if (geometryData.indices[i] < 0 || geometryData.indices[i] >= vertexCount) {
+        console.error('Index out of bounds:', geometryData.indices[i], 'max:', vertexCount - 1);
+        return null;
+      }
+    }
 
     const geometry = new THREE.BufferGeometry();
-    
+
     // Set vertices (backend provides flat array: [x,y,z, x,y,z, ...])
     geometry.setAttribute(
       'position',
       new THREE.BufferAttribute(new Float32Array(geometryData.vertices), 3)
     );
-    
+
     // Set face indices (backend provides triangulated faces)
     geometry.setIndex(geometryData.indices);
     
