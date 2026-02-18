@@ -42,9 +42,11 @@ public class DesignsController : ControllerBase
     [HttpPost("generate")]
     public async Task<ActionResult<HouseParameters>> Generate([FromBody] GenerateRequest request)
     {
-        // Validation is handled automatically by FluentValidation middleware
-        // ModelState will contain validation errors if any
-        
+        if (request.LotSize <= 0)
+            return BadRequest(new ErrorResponse("Lot size must be greater than zero."));
+        if (string.IsNullOrWhiteSpace(request.StylePrompt))
+            return BadRequest(new ErrorResponse("Style prompt cannot be empty."));
+
         try
         {
             // Parse style prompt to keywords
