@@ -1,4 +1,4 @@
-ifcopenshell==0.8.1
+ifcopenshell==0.8.4.post1
 ifctester==0.8.1
 ifcpatch==0.8.1
 ifcclash==0.8.1
