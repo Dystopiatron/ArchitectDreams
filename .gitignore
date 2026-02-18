@@ -5,6 +5,10 @@
 bin/
 obj/
 .vs/
+# Prevent accidentally committing appsettings overrides that may contain secrets
+appsettings.Production.json
+appsettings.Staging.json
+appsettings.Local.json
 
 # Python (IfcOpenShell)
 ifcopenshell_env/

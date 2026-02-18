@@ -2,7 +2,9 @@ using Xunit;
 using Microsoft.EntityFrameworkCore;
 using ArchitecturalDreamMachineBackend.Data;
 using ArchitecturalDreamMachineBackend.Controllers;
+using ArchitecturalDreamMachineBackend.Export;
 using ArchitecturalDreamMachineBackend.Services;
+using ArchitecturalDreamMachineBackend.Geometry;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Microsoft.AspNetCore.Mvc;
@@ -63,8 +65,14 @@ public class DesignsControllerTests
         // Arrange
         var context = GetInMemoryDbContext();
         var logger = new Mock<ILogger<DesignsController>>();
-        var mockOrchestration = new Mock<DesignOrchestrationService>(null, null, null, null);
-        var controller = new DesignsController(context, logger.Object, mockOrchestration.Object);
+        var mockOrchestration = new Mock<IDesignOrchestrationService>();
+        var mockHouseParams = new Mock<IHouseParametersService>();
+        var mockIfcExporter = new Mock<IIfcExporter>();
+        mockHouseParams
+            .Setup(x => x.CalculateParameters(It.IsAny<double>(), It.IsAny<StyleTemplate>(), It.IsAny<string?>(), It.IsAny<int?>()))
+            .Returns(new HouseParameters { LotSize = 2500 });
+        var mockGltfExporter = new Mock<IGltfExporter>();
+        var controller = new DesignsController(context, logger.Object, mockOrchestration.Object, mockHouseParams.Object, mockIfcExporter.Object, mockGltfExporter.Object);
 
         var request = new GenerateRequest
         {
@@ -91,8 +99,11 @@ public class DesignsControllerTests
         // Arrange
         var context = GetInMemoryDbContext();
         var logger = new Mock<ILogger<DesignsController>>();
-        var mockOrchestration = new Mock<DesignOrchestrationService>(null, null, null, null);
-        var controller = new DesignsController(context, logger.Object, mockOrchestration.Object);
+        var mockOrchestration = new Mock<IDesignOrchestrationService>();
+        var mockHouseParams = new Mock<IHouseParametersService>();
+        var mockIfcExporter = new Mock<IIfcExporter>();
+        var mockGltfExporter = new Mock<IGltfExporter>();
+        var controller = new DesignsController(context, logger.Object, mockOrchestration.Object, mockHouseParams.Object, mockIfcExporter.Object, mockGltfExporter.Object);
 
         var request = new GenerateRequest
         {
@@ -113,8 +124,11 @@ public class DesignsControllerTests
         // Arrange
         var context = GetInMemoryDbContext();
         var logger = new Mock<ILogger<DesignsController>>();
-        var mockOrchestration = new Mock<DesignOrchestrationService>(null, null, null, null);
-        var controller = new DesignsController(context, logger.Object, mockOrchestration.Object);
+        var mockOrchestration = new Mock<IDesignOrchestrationService>();
+        var mockHouseParams = new Mock<IHouseParametersService>();
+        var mockIfcExporter = new Mock<IIfcExporter>();
+        var mockGltfExporter = new Mock<IGltfExporter>();
+        var controller = new DesignsController(context, logger.Object, mockOrchestration.Object, mockHouseParams.Object, mockIfcExporter.Object, mockGltfExporter.Object);
 
         var request = new GenerateRequest
         {
@@ -135,8 +149,11 @@ public class DesignsControllerTests
         // Arrange
         var context = GetInMemoryDbContext();
         var logger = new Mock<ILogger<DesignsController>>();
-        var mockOrchestration = new Mock<DesignOrchestrationService>(null, null, null, null);
-        var controller = new DesignsController(context, logger.Object, mockOrchestration.Object);
+        var mockOrchestration = new Mock<IDesignOrchestrationService>();
+        var mockHouseParams = new Mock<IHouseParametersService>();
+        var mockIfcExporter = new Mock<IIfcExporter>();
+        var mockGltfExporter = new Mock<IGltfExporter>();
+        var controller = new DesignsController(context, logger.Object, mockOrchestration.Object, mockHouseParams.Object, mockIfcExporter.Object, mockGltfExporter.Object);
 
         // Add test designs
         context.Designs.AddRange(

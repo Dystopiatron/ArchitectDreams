@@ -1,81 +1,80 @@
 # Architectural Dream Machine
 
-THIS IS A WIP/NOT FINALIZED!!
+> THIS IS A WIP/NOT FINALIZED!!
 
-
-
-Turn your ideas into 3D house designs instantly. Type a style, see a rotating 3D model, download for professional CAD software. 
+Turn your ideas into 3D house designs instantly. Type a style, see a rotating 3D model, download for professional CAD or BIM software.
 
 ---
 
-## ⚡ Quick Start
+## Quick Start
 
-**Terminal 1 - Start Backend:**
+**Terminal 1 — Start Backend:**
 ```bash
 cd ArchitecturalDreamMachineBackend/ArchitecturalDreamMachineBackend
 dotnet run
 ```
 
-**Terminal 2 - Start Frontend:**
+**Terminal 2 — Start Frontend:**
 ```bash
 cd ArchitecturalDreamMachineFrontend
 npx expo start
 ```
 
-**Press 'w'** to open in your web browser → http://localhost:8081
-
-**That's it!** 🎉
+Press **`w`** to open in your web browser → http://localhost:8081
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 **New Users:**
-- **[QUICKSTART.md](QUICKSTART.md)** - Get running in 2 minutes
-- **[USER_GUIDE.md](USER_GUIDE.md)** - Complete walkthrough with examples
+- **[QUICKSTART.md](QUICKSTART.md)** — Get running in 2 minutes
+- **[USER_GUIDE.md](USER_GUIDE.md)** — Complete walkthrough with examples
+- **[HOUSE_LAYOUTS.md](HOUSE_LAYOUTS.md)** — Understanding the 5 layout types
+- **[3D_AND_EXPORT_GUIDE.md](3D_AND_EXPORT_GUIDE.md)** — 3D viewer, camera controls, OBJ/IFC/GLB export and import
 
 **Developers:**
-- **[GETTING_STARTED.md](GETTING_STARTED.md)** - Technical setup and architecture
-- **[BACKEND_API.md](ArchitecturalDreamMachineBackend/BACKEND_API.md)** - Backend API documentation
-- **[FRONTEND_3D_CLIENT.md](ArchitecturalDreamMachineFrontend/FRONTEND_3D_CLIENT.md)** - Frontend 3D client
-- **[HOUSE_LAYOUTS.md](HOUSE_LAYOUTS.md)** - Understanding the 5 layout types
-- **[3D_FEATURES_GUIDE.md](3D_FEATURES_GUIDE.md)** - 3D viewer and OBJ export
+- **[DEVELOPER_SETUP.md](DEVELOPER_SETUP.md)** — Technical setup, architecture, API reference, security
+- **[ROADMAP.md](ROADMAP.md)** — Completed work and planned enhancements (BIM, IFC, semantic model)
 
 ---
 
-## ✨ Features
+## Features
 
-- 🎨 **Natural Language Input** - "Modern glass house" → instant 3D model
-- 🏗️ **3D Visualization** - Rotating house with proper roof, windows, door
-- 📥 **OBJ Export** - Download for AutoCAD, Revit, Blender, SketchUp
-- 💾 **Design History** - All designs saved to database
-- 🎭 **3 Built-in Styles** - Modern, Victorian, Brutalist
+- **Natural Language Input** — "Modern glass house" → instant 3D model
+- **3D Visualization** — Rotating house with roof, windows, doors, interior walls
+- **5 Layout Types** — Cube, L-shape, two-story, split-level, angled
+- **3 Export Formats** — OBJ (mesh), IFC4 (BIM/Revit), GLB (web/Blender)
+- **Design History** — All designs saved to database
+- **3 Built-in Styles** — Modern, Victorian, Brutalist
+- **Security** — API key auth, rate limiting, HSTS, input validation
 
 ---
 
-## 🏛️ Architecture
+## Architecture
 
 ```
-React Native Web (Frontend)
-         ↓ HTTP
-ASP.NET Core API (Backend)
-         ↓ Entity Framework
-SQLite Database
+React Native / Expo (Frontend)
+  Three.js — interactive 3D rendering
+         ↓ HTTP (port 5095)
+ASP.NET Core 8.0 (Backend)
+  PromptParser → HouseParametersService → DesignOrchestrationService
+         ↓ Entity Framework Core
+SQLite (default) / SQL Server (optional)
 ```
 
 **Tech Stack:**
 - Backend: C# / ASP.NET Core 8.0 / Entity Framework / SQLite
-- Frontend: React Native / Three.js / Expo
-- 3D: Three.js 0.145.0 with WebGL rendering
+- Frontend: React Native / Three.js 0.145.0 / Expo
+- Export: xBIM Toolkit (IFC4), SharpGLTF Toolkit (GLB)
 
 ---
 
-## 🎯 Example Usage
+## Example Usage
 
 1. Lot Size: `2500` sq ft
 2. Style: `modern minimalist with large windows`
-3. Click Generate → See 3D model
-4. Download OBJ → Import to Blender/AutoCAD
+3. Click **Generate Design** → see 3D model
+4. Download OBJ, IFC, or GLB
 
 **Style Keywords:**
 - Modern: `modern`, `minimalist`, `glass`, `contemporary`
@@ -84,94 +83,48 @@ SQLite Database
 
 ---
 
-## 📋 Requirements
+## Requirements
 
-- macOS (or Windows/Linux with .NET 8)
 - .NET 8 SDK
 - Node.js 18+
 - Web browser (Chrome/Firefox recommended)
+- macOS, Windows, or Linux
 
 ---
 
-## 🧪 Testing
+## Testing
 
-**Backend tests:**
 ```bash
 cd ArchitecturalDreamMachineBackend/ArchitecturalDreamMachineBackend
 dotnet test
 ```
 
-Tests cover: API validation, prompt parsing, geometry generation
+Tests cover: API validation, prompt parsing, geometry generation, controller behavior.
 
 ---
 
-## 🚀 API Endpoints
+## API Endpoints
 
-**Generate Design:**
 ```http
-POST /api/designs/generate
-Content-Type: application/json
-
-{
-  "lotSize": 2500,
-  "stylePrompt": "modern minimalist"
-}
+POST /api/designs/generate          # Generate design from prompt
+GET  /api/designs                   # List all designs
+GET  /api/designs/{id}              # Get design by ID
+GET  /api/designs/{id}/export       # Download OBJ file
+GET  /api/designs/{id}/export/ifc   # Download IFC4 file (BIM)
+GET  /api/designs/{id}/export/gltf  # Download GLB file (web/3D)
 ```
 
-**Export to OBJ:**
-```http
-GET /api/designs/{id}/export
-```
-
-**View API docs:** http://localhost:5095/swagger (when backend running)
+All endpoints require `X-API-Key` header.
+API docs: http://localhost:5095/swagger (when backend running)
 
 ---
 
-## 🎓 For Developers
+## License
 
-**Project Structure:**
-```
-ArchitectCode/
-├── ArchitecturalDreamMachineBackend/  # C# API
-│   ├── Controllers/                    # REST endpoints
-│   ├── Data/                           # Database models
-│   ├── Geometry/                       # 3D mesh generation
-│   └── Tests/                          # xUnit tests
-│
-├── ArchitecturalDreamMachineFrontend/  # React Native
-│   ├── screens/                        # UI screens
-│   ├── components/                     # 3D viewer component
-│   └── App.js                          # Navigation
-│
-└── Documentation/                      # User guides
-```
-
-**Add New Style:**
-1. Edit `Data/AppDbContext.cs`
-2. Add to `OnModelCreating` method
-3. Restart backend (database auto-updates)
-
-**Customize 3D:**
-- Edit `components/HouseViewer3D.js`
-- Modify geometry, materials, lighting
-- Add windows, doors, details
+Educational / personal use
 
 ---
 
-## 📝 License
+## Credits
 
-Educational/personal use
-
----
-
-## 🙏 Credits
-
-Built with:
-- ASP.NET Core
-- React Native & Expo
-- Three.js
-- Entity Framework Core
-
----
-
-**Need help?** Check [USER_GUIDE.md](USER_GUIDE.md) for detailed instructions!
+Built with ASP.NET Core, React Native, Expo, Three.js, Entity Framework Core, xBIM Toolkit, SharpGLTF Toolkit.

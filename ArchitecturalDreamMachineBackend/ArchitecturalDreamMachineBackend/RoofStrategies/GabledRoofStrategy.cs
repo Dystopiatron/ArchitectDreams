@@ -1,3 +1,4 @@
+using ArchitecturalDreamMachineBackend.Constants;
 using ArchitecturalDreamMachineBackend.Models;
 using ArchitecturalDreamMachineBackend.Services;
 
@@ -10,9 +11,9 @@ namespace ArchitecturalDreamMachineBackend.RoofStrategies
     /// </summary>
     public class GabledRoofStrategy : IRoofStrategy
     {
-        private readonly GeometryService _geometryService;
+        private readonly IGeometryService _geometryService;
         
-        public GabledRoofStrategy(GeometryService geometryService)
+        public GabledRoofStrategy(IGeometryService geometryService)
         {
             _geometryService = geometryService;
         }
@@ -31,7 +32,7 @@ namespace ArchitecturalDreamMachineBackend.RoofStrategies
                 overhang);
             
             // Calculate roof height (matches Phase 1.1 fix)
-            double pitchRatio = roofPitch / 12.0;
+            double pitchRatio = roofPitch / ArchitecturalConstants.PitchDivisor;
             double roofWidth = section.Width + (overhang * 2);
             double roofHeight = (roofWidth / 2) * pitchRatio;
             

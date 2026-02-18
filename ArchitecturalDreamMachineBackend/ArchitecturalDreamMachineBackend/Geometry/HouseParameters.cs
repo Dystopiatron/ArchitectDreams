@@ -1,24 +1,26 @@
+using ArchitecturalDreamMachineBackend.Constants;
+
 namespace ArchitecturalDreamMachineBackend.Geometry;
 
 public class HouseParameters
 {
     public double LotSize { get; set; }
-    public string RoofType { get; set; } = string.Empty;
-    public string WindowStyle { get; set; } = string.Empty;
+    public string RoofType { get; set; } = "flat";
+    public string WindowStyle { get; set; } = "standard";
     public int RoomCount { get; set; }
     public Material Material { get; set; } = new();
     
     // Architectural parameters
-    public double CeilingHeight { get; set; } = 9.0;
+    public double CeilingHeight { get; set; } = ArchitecturalConstants.DefaultCeilingHeight;
     public int Stories { get; set; } = 1;
     public string BuildingShape { get; set; } = "rectangular";
-    public double WindowToWallRatio { get; set; } = 0.15;
+    public double WindowToWallRatio { get; set; } = ArchitecturalConstants.DefaultWindowToWallRatio;
     public string FoundationType { get; set; } = "slab";
     public string ExteriorMaterial { get; set; } = "stucco";
-    public double RoofPitch { get; set; } = 6.0;
+    public double RoofPitch { get; set; } = ArchitecturalConstants.DefaultRoofPitch;
     public bool HasParapet { get; set; } = false;
     public bool HasEaves { get; set; } = true;
-    public double EavesOverhang { get; set; } = 1.5;
+    public double EavesOverhang { get; set; } = ArchitecturalConstants.DefaultEavesOverhang;
     
     // Building footprint dimensions (used for room layout)
     public double FootprintWidth { get; set; }
@@ -33,7 +35,7 @@ public class HouseParameters
         
         // Calculate base dimensions from lot size
         float baseSize = (float)Math.Sqrt(LotSize);
-        float height = baseSize * 0.6f; // Height proportional to base
+        float height = baseSize * (float)ArchitecturalConstants.HeightToBaseRatio; // Height proportional to base
         
         // Generate cube vertices (8 vertices for a simple house box)
         mesh.Vertices = new List<Vector3>

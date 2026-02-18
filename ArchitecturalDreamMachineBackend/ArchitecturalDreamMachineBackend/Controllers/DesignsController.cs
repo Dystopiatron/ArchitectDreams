@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
@@ -12,6 +13,7 @@ namespace ArchitecturalDreamMachineBackend.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[EnableRateLimiting("fixed")]
 public class DesignsController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -19,27 +21,32 @@ public class DesignsController : ControllerBase
     private readonly IDesignOrchestrationService _orchestrationService;
     private readonly IHouseParametersService _houseParametersService;
     private readonly IIfcExporter _ifcExporter;
+    private readonly IGltfExporter _gltfExporter;
 
     public DesignsController(
-        AppDbContext context, 
+        AppDbContext context,
         ILogger<DesignsController> logger,
         IDesignOrchestrationService orchestrationService,
         IHouseParametersService houseParametersService,
-        IIfcExporter ifcExporter)
+        IIfcExporter ifcExporter,
+        IGltfExporter gltfExporter)
     {
         _context = context;
         _logger = logger;
         _orchestrationService = orchestrationService;
         _houseParametersService = houseParametersService;
         _ifcExporter = ifcExporter;
+        _gltfExporter = gltfExporter;
     }
 
     [HttpPost("generate")]
     public async Task<ActionResult<HouseParameters>> Generate([FromBody] GenerateRequest request)
     {
-        // Validation is handled automatically by FluentValidation middleware
-        // ModelState will contain validation errors if any
-        
+        if (request.LotSize <= 0)
+            return BadRequest(new ErrorResponse("Lot size must be greater than zero."));
+        if (string.IsNullOrWhiteSpace(request.StylePrompt))
+            return BadRequest(new ErrorResponse("Style prompt cannot be empty."));
+
         try
         {
             // Parse style prompt to keywords
@@ -111,14 +118,22 @@ public class DesignsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Design>>> GetAll()
+    public async Task<ActionResult<IEnumerable<Design>>> GetAll(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50)
     {
         try
         {
+            if (page < 1) page = 1;
+            if (pageSize < 1) pageSize = 1;
+            if (pageSize > 100) pageSize = 100;
+
             var designs = await _context.Designs
                 .OrderByDescending(d => d.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
-            
+
             return Ok(designs);
         }
         catch (Exception ex)
@@ -244,6 +259,61 @@ public class DesignsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error exporting design {DesignId} to IFC", id);
+            return StatusCode(500, new ErrorResponse("Internal server error"));
+        }
+    }
+    /// <summary>
+    /// Export a design to glTF/GLB format for 3D viewers and web applications
+    /// </summary>
+    [HttpGet("{id}/export/gltf")]
+    public async Task<IActionResult> ExportToGltf(int id)
+    {
+        try
+        {
+            var design = await _context.Designs.FindAsync(id);
+            if (design == null)
+            {
+                return NotFound(new ErrorResponse("Design not found"));
+            }
+
+            var keywords = design.StyleKeywords.Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries);
+            StyleTemplate? styleTemplate = null;
+
+            foreach (var keyword in keywords)
+            {
+                styleTemplate = await _context.StyleTemplates
+                    .FirstOrDefaultAsync(st => st.Name.ToLower().Contains(keyword.ToLower()));
+
+                if (styleTemplate != null)
+                    break;
+            }
+
+            if (styleTemplate == null)
+            {
+                styleTemplate = await _context.StyleTemplates
+                    .FirstOrDefaultAsync(st => st.Name == "Modern");
+            }
+
+            if (styleTemplate == null)
+            {
+                return StatusCode(500, new ErrorResponse("No style templates available"));
+            }
+
+            var houseParameters = _houseParametersService.CalculateParameters(
+                design.LotSize,
+                styleTemplate);
+
+            var geometry = _orchestrationService.GenerateCompleteGeometry(houseParameters);
+
+            var glbBytes = _gltfExporter.ExportToGlb(houseParameters, geometry, styleTemplate.Name);
+
+            var safeName = Regex.Replace(styleTemplate.Name.ToLower(), @"[^a-zA-Z0-9_-]", "");
+            var fileName = $"house_design_{id}_{safeName}.glb";
+            return File(glbBytes, "model/gltf-binary", fileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting design {DesignId} to glTF", id);
             return StatusCode(500, new ErrorResponse("Internal server error"));
         }
     }

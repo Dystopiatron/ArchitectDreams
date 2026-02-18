@@ -1,3 +1,5 @@
+using ArchitecturalDreamMachineBackend.Geometry;
+
 namespace ArchitecturalDreamMachineBackend.Models
 {
     /// <summary>
@@ -30,12 +32,27 @@ namespace ArchitecturalDreamMachineBackend.Models
         /// Position offset for this geometry
         /// </summary>
         public Position? Position { get; set; }
+        
+        /// <summary>
+        /// Rotation in radians for this geometry (optional)
+        /// </summary>
+        public Rotation? Rotation { get; set; }
     }
     
     /// <summary>
     /// 3D position coordinates
     /// </summary>
     public class Position
+    {
+        public double X { get; set; }
+        public double Y { get; set; }
+        public double Z { get; set; }
+    }
+    
+    /// <summary>
+    /// 3D rotation in radians (Euler angles)
+    /// </summary>
+    public class Rotation
     {
         public double X { get; set; }
         public double Y { get; set; }
@@ -63,9 +80,19 @@ namespace ArchitecturalDreamMachineBackend.Models
         public List<GeometryData> Windows { get; set; } = new();
         
         /// <summary>
+        /// Window elements with wall relationships for BIM export
+        /// </summary>
+        public List<WindowElement> WindowElements { get; set; } = new();
+        
+        /// <summary>
         /// Interior wall geometries
         /// </summary>
         public List<GeometryData> InteriorWalls { get; set; } = new();
+        
+        /// <summary>
+        /// Door elements with wall relationships for BIM export
+        /// </summary>
+        public List<DoorElement> DoorElements { get; set; } = new();
         
         /// <summary>
         /// Foundation/ground floor geometry
@@ -81,6 +108,12 @@ namespace ArchitecturalDreamMachineBackend.Models
         /// Maximum dimension (for camera positioning)
         /// </summary>
         public double MaxDimension { get; set; }
+
+        /// <summary>
+        /// Semantic building model with typed wall segments, linked windows/doors.
+        /// Null when not computed (e.g. lightweight renders).
+        /// </summary>
+        public BuildingModel? SemanticModel { get; set; }
     }
     
     /// <summary>

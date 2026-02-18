@@ -83,19 +83,30 @@ export default function MainScreen() {
       
       const response = await axios.post(config.endpoints.generate, requestData);
 
-      // Get parameters from backend (already has overrides applied)
-      const params = { ...response.data.houseParameters };
-      
-      // Include geometry from backend
-      if (response.data.geometry) {
-        params.geometry = response.data.geometry;
+      // Validate response structure before using
+      const data = response.data;
+      if (!data || !data.houseParameters || typeof data.houseParameters !== 'object') {
+        setErrorMessage('Invalid response from server');
+        return;
       }
-      
+      if (typeof data.designId !== 'number' || !data.styleName) {
+        setErrorMessage('Invalid response from server');
+        return;
+      }
+
+      // Get parameters from backend (already has overrides applied)
+      const params = { ...data.houseParameters };
+
+      // Include geometry from backend
+      if (data.geometry) {
+        params.geometry = data.geometry;
+      }
+
       setHouseParams(params);
-      setMeshData(response.data.mesh);
+      setMeshData(data.mesh);
       setDesignInfo({
-        styleName: response.data.styleName,
-        designId: response.data.designId,
+        styleName: data.styleName,
+        designId: data.designId,
       });
       setErrorMessage('');
     } catch (error) {

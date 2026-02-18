@@ -7,12 +7,12 @@ namespace ArchitecturalDreamMachineBackend.Services
     /// Service for calculating roof geometries
     /// Selects appropriate roof strategy based on roof type
     /// </summary>
-    public class RoofService
+    public class RoofService : IRoofService
     {
         private readonly ILogger<RoofService> _logger;
-        private readonly GeometryService _geometryService;
+        private readonly IGeometryService _geometryService;
         
-        public RoofService(ILogger<RoofService> logger, GeometryService geometryService)
+        public RoofService(ILogger<RoofService> logger, IGeometryService geometryService)
         {
             _logger = logger;
             _geometryService = geometryService;
