@@ -118,15 +118,8 @@ User secrets are stored in `~/.microsoft/usersecrets/` and are never committed t
 
 ```bash
 dotnet test
-# Expected: 8 pass, 2 pre-existing failures (Assert.IsType BadRequest vs ObjectResult — unrelated to current work)
+# Expected: 10 pass, 0 failures
 ```
-
----
-
-## Known Pre-existing Test Failures (not to fix unless asked)
-
-- `Generate_InvalidLotSize_ReturnsBadRequest` — expects `BadRequestObjectResult`, gets `ObjectResult`
-- `Generate_EmptyStylePrompt_ReturnsBadRequest` — same issue
 
 ---
 
