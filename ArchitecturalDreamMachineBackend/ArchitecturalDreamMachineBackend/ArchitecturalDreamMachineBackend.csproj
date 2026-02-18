@@ -22,7 +22,7 @@
     <PackageReference Include="Moq" Version="4.20.72" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="SharpGLTF.Toolkit" Version="1.0.2" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.4" />
     <PackageReference Include="Xbim.Essentials" Version="6.0.565" />
     <PackageReference Include="Xbim.Ifc4" Version="6.0.565" />
     <PackageReference Include="xunit" Version="2.9.3" />
