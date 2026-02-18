@@ -1,3 +1,4 @@
+using ArchitecturalDreamMachineBackend.Constants;
 using ArchitecturalDreamMachineBackend.Models;
 
 namespace ArchitecturalDreamMachineBackend.Services
@@ -6,7 +7,7 @@ namespace ArchitecturalDreamMachineBackend.Services
     /// Main service for generating geometric data that can be directly rendered by Three.js
     /// Combines VertexCalculator and FaceGenerator to produce complete GeometryData objects
     /// </summary>
-    public class GeometryService
+    public class GeometryService : IGeometryService
     {
         /// <summary>
         /// Create a box geometry (building section, floor platform, etc.)
@@ -59,7 +60,7 @@ namespace ArchitecturalDreamMachineBackend.Services
             double overhang)
         {
             // Calculate pitch ratio (rise over run)
-            double pitchRatio = roofPitch / 12.0;
+            double pitchRatio = roofPitch / ArchitecturalConstants.PitchDivisor;
             
             // Apply overhang first, then calculate height
             // This matches Phase 1.1 fix: roofHeight = (roofWidth / 2) * pitchRatio
@@ -111,8 +112,8 @@ namespace ArchitecturalDreamMachineBackend.Services
             double width,
             double depth,
             double overhang,
-            double parapetHeight = 2.5,
-            double parapetThickness = 0.5)
+            double parapetHeight = ArchitecturalConstants.DefaultParapetHeight,
+            double parapetThickness = ArchitecturalConstants.DefaultParapetThickness)
         {
             double roofWidth = width + (overhang * 2);
             double roofDepth = depth + (overhang * 2);

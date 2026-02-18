@@ -47,6 +47,7 @@ builder.Services.AddScoped<IInteriorWallService, InteriorWallService>();
 builder.Services.AddScoped<IDesignOrchestrationService, DesignOrchestrationService>();
 builder.Services.AddScoped<IHouseParametersService, HouseParametersService>();
 builder.Services.AddScoped<IIfcExporter, IfcExporter>();
+builder.Services.AddScoped<IGltfExporter, GltfExporter>();
 
 // Configure CORS for React Native frontend
 var corsOrigins = builder.Configuration

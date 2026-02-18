@@ -1,3 +1,4 @@
+using ArchitecturalDreamMachineBackend.Geometry;
 using ArchitecturalDreamMachineBackend.Models;
 using ArchitecturalDreamMachineBackend.LayoutStrategies;
 
@@ -7,7 +8,7 @@ namespace ArchitecturalDreamMachineBackend.Services
     /// Service to determine and calculate building layouts
     /// Selects appropriate layout strategy based on style and building shape
     /// </summary>
-    public class LayoutService
+    public class LayoutService : ILayoutService
     {
         private readonly ILogger<LayoutService> _logger;
         
@@ -54,6 +55,106 @@ namespace ArchitecturalDreamMachineBackend.Services
             return layout;
         }
         
+        /// <summary>
+        /// Decompose layout sections into typed exterior wall segments.
+        /// Each section box produces 4 wall faces (front, back, left, right).
+        /// </summary>
+        public List<WallSegment> GenerateExteriorWalls(
+            LayoutData layout,
+            double ceilingHeight,
+            int stories,
+            string material,
+            string color)
+        {
+            var walls = new List<WallSegment>();
+            const double wallThickness = 0.5;
+
+            foreach (var section in layout.Sections)
+            {
+                double halfW = section.Width / 2.0;
+                double halfD = section.Depth / 2.0;
+                double baseY = section.Y - section.Height / 2.0;
+
+                // Front wall (+Z face)
+                walls.Add(new WallSegment
+                {
+                    Name = $"Exterior_Front_F{section.Floor}",
+                    StartX = section.X - halfW,
+                    StartZ = section.Z + halfD,
+                    EndX = section.X + halfW,
+                    EndZ = section.Z + halfD,
+                    BaseY = baseY,
+                    Height = section.Height,
+                    Thickness = wallThickness,
+                    Type = WallType.Exterior,
+                    IsLoadBearing = true,
+                    Floor = section.Floor,
+                    MaterialType = material,
+                    Color = color
+                });
+
+                // Back wall (-Z face)
+                walls.Add(new WallSegment
+                {
+                    Name = $"Exterior_Back_F{section.Floor}",
+                    StartX = section.X + halfW,
+                    StartZ = section.Z - halfD,
+                    EndX = section.X - halfW,
+                    EndZ = section.Z - halfD,
+                    BaseY = baseY,
+                    Height = section.Height,
+                    Thickness = wallThickness,
+                    Type = WallType.Exterior,
+                    IsLoadBearing = true,
+                    Floor = section.Floor,
+                    MaterialType = material,
+                    Color = color
+                });
+
+                // Left wall (-X face)
+                walls.Add(new WallSegment
+                {
+                    Name = $"Exterior_Left_F{section.Floor}",
+                    StartX = section.X - halfW,
+                    StartZ = section.Z - halfD,
+                    EndX = section.X - halfW,
+                    EndZ = section.Z + halfD,
+                    BaseY = baseY,
+                    Height = section.Height,
+                    Thickness = wallThickness,
+                    Type = WallType.Exterior,
+                    IsLoadBearing = true,
+                    Floor = section.Floor,
+                    MaterialType = material,
+                    Color = color
+                });
+
+                // Right wall (+X face)
+                walls.Add(new WallSegment
+                {
+                    Name = $"Exterior_Right_F{section.Floor}",
+                    StartX = section.X + halfW,
+                    StartZ = section.Z + halfD,
+                    EndX = section.X + halfW,
+                    EndZ = section.Z - halfD,
+                    BaseY = baseY,
+                    Height = section.Height,
+                    Thickness = wallThickness,
+                    Type = WallType.Exterior,
+                    IsLoadBearing = true,
+                    Floor = section.Floor,
+                    MaterialType = material,
+                    Color = color
+                });
+            }
+
+            _logger.LogInformation(
+                "Generated {Count} exterior wall segments from {Sections} sections",
+                walls.Count, layout.Sections.Count);
+
+            return walls;
+        }
+
         /// <summary>
         /// Select appropriate layout strategy
         /// </summary>

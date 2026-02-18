@@ -38,13 +38,14 @@ npx expo start
 
 **Can't connect?**
 - Verify backend shows "Now listening on: http://localhost:5095"
-- Visit http://localhost:5095/swagger to test
+- Visit http://localhost:5095/swagger to test (use your API key via the Authorize button)
 
 ## What's Included
 
-✅ 3 built-in architectural styles (Modern, Victorian, Brutalist)  
-✅ 5 different building layouts (cube, L-shape, two-story, split-level, angled)  
-✅ Rotating 3D models in browser  
-✅ OBJ file export for AutoCAD/Blender/Revit  
+✅ 3 built-in architectural styles (Modern, Victorian, Brutalist)
+✅ 5 different building layouts (cube, L-shape, two-story, split-level, angled)
+✅ Rotating 3D models in browser
+✅ 3 export formats: OBJ (mesh), IFC4 (BIM/Revit), GLB (web/Blender)
+✅ API key authentication and rate limiting
 
-**Next:** See [USER_GUIDE.md](USER_GUIDE.md) for detailed features and [HOUSE_LAYOUTS.md](HOUSE_LAYOUTS.md) to understand layout varieties.
+**Next:** See [USER_GUIDE.md](USER_GUIDE.md) for detailed features, [HOUSE_LAYOUTS.md](HOUSE_LAYOUTS.md) for layout types, or [DEVELOPER_SETUP.md](DEVELOPER_SETUP.md) for technical setup.

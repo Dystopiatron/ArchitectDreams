@@ -9,9 +9,9 @@ namespace ArchitecturalDreamMachineBackend.RoofStrategies
     /// </summary>
     public class FlatRoofStrategy : IRoofStrategy
     {
-        private readonly GeometryService _geometryService;
+        private readonly IGeometryService _geometryService;
         
-        public FlatRoofStrategy(GeometryService geometryService)
+        public FlatRoofStrategy(IGeometryService geometryService)
         {
             _geometryService = geometryService;
         }
