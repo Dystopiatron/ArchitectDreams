@@ -23,7 +23,7 @@ Main branch: `master`
 | Backend | C# / ASP.NET Core 8.0 / Entity Framework Core / SQLite |
 | Frontend | React Native / Expo / Three.js 0.145.0 |
 | BIM Export | xBIM Toolkit (IFC4), SharpGLTF Toolkit (GLB) |
-| Auth | API key (`X-API-Key` header), keys in `appsettings.json` |
+| Auth | API key (`X-API-Key` header) — dev: auto-skipped if no key configured; set via user secrets or `API_KEY` env var |
 
 **Backend port: 5095** (not 5162 — that was outdated)
 
@@ -98,6 +98,19 @@ GET  /api/designs/{id}/export/gltf  → GLB
 ```
 
 All require `X-API-Key` header. Swagger: http://localhost:5095/swagger
+
+---
+
+## API Key Setup
+
+**Development** — auth is auto-skipped when no key is configured, so you can hit the API freely. To test auth locally:
+```bash
+cd ArchitecturalDreamMachineBackend/ArchitecturalDreamMachineBackend
+dotnet user-secrets set "ApiKey" "your-dev-key"
+```
+User secrets are stored in `~/.microsoft/usersecrets/` and are never committed to git.
+
+**Production** — set the `API_KEY` environment variable in your hosting environment. Never put real keys in `appsettings.json` or any committed file.
 
 ---
 
