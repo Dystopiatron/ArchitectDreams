@@ -5,55 +5,6 @@ using ArchitecturalDreamMachineBackend.Models;
 namespace ArchitecturalDreamMachineBackend.Services;
 
 /// <summary>
-/// Interface for window generation
-/// </summary>
-public interface IWindowService
-{
-    /// <summary>
-    /// Generate window geometries for all rooms
-    /// </summary>
-    /// <param name="rooms">Room layout data</param>
-    /// <param name="windowToWallRatio">Ratio of window area to wall area</param>
-    /// <param name="ceilingHeight">Height of each floor</param>
-    /// <param name="footprintWidth">Total building width</param>
-    /// <param name="footprintDepth">Total building depth</param>
-    /// <returns>List of window geometries</returns>
-    List<GeometryData> GenerateWindows(
-        List<Room> rooms,
-        double windowToWallRatio,
-        double ceilingHeight,
-        double footprintWidth,
-        double footprintDepth);
-    
-    /// <summary>
-    /// Generate window elements with wall relationships for BIM export
-    /// </summary>
-    /// <param name="rooms">Room layout data</param>
-    /// <param name="windowToWallRatio">Ratio of window area to wall area</param>
-    /// <param name="ceilingHeight">Height of each floor</param>
-    /// <param name="footprintWidth">Total building width</param>
-    /// <param name="footprintDepth">Total building depth</param>
-    /// <returns>List of window elements with wall relationship data</returns>
-    List<WindowElement> GenerateWindowElements(
-        List<Room> rooms,
-        double windowToWallRatio,
-        double ceilingHeight,
-        double footprintWidth,
-        double footprintDepth);
-
-    /// <summary>
-    /// Generate window elements linked to typed exterior wall segments
-    /// </summary>
-    List<WindowElement> GenerateLinkedWindowElements(
-        List<Room> rooms,
-        double windowToWallRatio,
-        double ceilingHeight,
-        double footprintWidth,
-        double footprintDepth,
-        List<WallSegment> exteriorWalls);
-}
-
-/// <summary>
 /// Service for generating window geometries based on room layouts
 /// Places windows on exterior walls respecting architectural proportions
 /// </summary>
