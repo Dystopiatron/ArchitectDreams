@@ -16,7 +16,8 @@ public interface IWindowService
         double windowToWallRatio,
         double ceilingHeight,
         double footprintWidth,
-        double footprintDepth);
+        double footprintDepth,
+        string buildingShape = "rectangular");
 
     /// <summary>
     /// Generate window elements with wall relationships for BIM export
@@ -26,7 +27,8 @@ public interface IWindowService
         double windowToWallRatio,
         double ceilingHeight,
         double footprintWidth,
-        double footprintDepth);
+        double footprintDepth,
+        string buildingShape = "rectangular");
 
     /// <summary>
     /// Generate window elements linked to typed exterior wall segments
@@ -37,5 +39,6 @@ public interface IWindowService
         double ceilingHeight,
         double footprintWidth,
         double footprintDepth,
-        List<WallSegment> exteriorWalls);
+        List<WallSegment> exteriorWalls,
+        string buildingShape = "rectangular");
 }

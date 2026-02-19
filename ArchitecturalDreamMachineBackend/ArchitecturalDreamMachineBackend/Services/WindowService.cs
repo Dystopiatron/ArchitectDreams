@@ -32,10 +32,11 @@ public class WindowService : IWindowService
         double windowToWallRatio,
         double ceilingHeight,
         double footprintWidth,
-        double footprintDepth)
+        double footprintDepth,
+        string buildingShape = "rectangular")
     {
         var windows = new List<GeometryData>();
-        
+
         _logger.LogInformation(
             "Generating windows for {RoomCount} rooms with {Ratio:P0} window-to-wall ratio",
             rooms.Count, windowToWallRatio);
@@ -56,8 +57,9 @@ public class WindowService : IWindowService
                     windowToWallRatio,
                     windowCenterY,
                     footprintWidth,
-                    footprintDepth);
-                
+                    footprintDepth,
+                    buildingShape);
+
                 windows.AddRange(roomWindows);
             }
         }
@@ -72,11 +74,12 @@ public class WindowService : IWindowService
         double windowToWallRatio,
         double ceilingHeight,
         double footprintWidth,
-        double footprintDepth)
+        double footprintDepth,
+        string buildingShape = "rectangular")
     {
         var windowElements = new List<WindowElement>();
         int windowIndex = 1;
-        
+
         _logger.LogInformation(
             "Generating window elements for {RoomCount} rooms with wall relationships",
             rooms.Count);
@@ -98,13 +101,14 @@ public class WindowService : IWindowService
                     windowCenterY,
                     footprintWidth,
                     footprintDepth,
-                    ref windowIndex);
-                
+                    ref windowIndex,
+                    buildingShape);
+
                 windowElements.AddRange(roomWindowElements);
             }
         }
 
-        _logger.LogInformation("Generated {WindowCount} window elements with wall relationships", 
+        _logger.LogInformation("Generated {WindowCount} window elements with wall relationships",
             windowElements.Count);
         return windowElements;
     }
@@ -116,11 +120,12 @@ public class WindowService : IWindowService
         double ceilingHeight,
         double footprintWidth,
         double footprintDepth,
-        List<WallSegment> exteriorWalls)
+        List<WallSegment> exteriorWalls,
+        string buildingShape = "rectangular")
     {
         // Generate window elements using the existing logic
         var elements = GenerateWindowElements(
-            rooms, windowToWallRatio, ceilingHeight, footprintWidth, footprintDepth);
+            rooms, windowToWallRatio, ceilingHeight, footprintWidth, footprintDepth, buildingShape);
 
         // Link each window to the nearest matching exterior wall segment
         foreach (var window in elements)
@@ -199,19 +204,20 @@ public class WindowService : IWindowService
         double windowCenterY,
         double footprintWidth,
         double footprintDepth,
-        ref int windowIndex)
+        ref int windowIndex,
+        string buildingShape = "rectangular")
     {
         var elements = new List<WindowElement>();
-        
+
         // Calculate number of windows based on room's WindowCount property
-        int windowCount = room.WindowCount > 0 
-            ? room.WindowCount 
+        int windowCount = room.WindowCount > 0
+            ? room.WindowCount
             : CalculateWindowCount(room.Width, room.Depth, windowToWallRatio);
 
         if (windowCount == 0) return elements;
 
         // Determine which walls are exterior walls
-        var exteriorWalls = DetermineExteriorWalls(room, footprintWidth, footprintDepth);
+        var exteriorWalls = DetermineExteriorWalls(room, footprintWidth, footprintDepth, buildingShape);
 
         if (!exteriorWalls.Any())
         {
@@ -347,20 +353,21 @@ public class WindowService : IWindowService
         double windowToWallRatio,
         double windowCenterY,
         double footprintWidth,
-        double footprintDepth)
+        double footprintDepth,
+        string buildingShape = "rectangular")
     {
         var windows = new List<GeometryData>();
-        
+
         // Calculate number of windows based on room's WindowCount property
         // or calculate from wall area and ratio
-        int windowCount = room.WindowCount > 0 
-            ? room.WindowCount 
+        int windowCount = room.WindowCount > 0
+            ? room.WindowCount
             : CalculateWindowCount(room.Width, room.Depth, windowToWallRatio);
 
         if (windowCount == 0) return windows;
 
         // Determine which walls are exterior walls
-        var exteriorWalls = DetermineExteriorWalls(room, footprintWidth, footprintDepth);
+        var exteriorWalls = DetermineExteriorWalls(room, footprintWidth, footprintDepth, buildingShape);
 
         if (!exteriorWalls.Any())
         {
@@ -396,7 +403,8 @@ public class WindowService : IWindowService
     private List<ExteriorWall> DetermineExteriorWalls(
         Room room,
         double footprintWidth,
-        double footprintDepth)
+        double footprintDepth,
+        string buildingShape = "rectangular")
     {
         var walls = new List<ExteriorWall>();
 
@@ -471,6 +479,48 @@ public class WindowService : IWindowService
                 CenterZ = roomCenterZ,
                 FacingX = -0.1
             });
+        }
+
+        // L-shape: the "inner corner step" creates two additional exterior faces that
+        // sit at intermediate positions (not on the bounding-box perimeter).
+        //
+        //  Main wing : full width  × front 60% depth  → Z ∈ [-D/2,  0.1D]
+        //  Corner wing: left 50%   × back  40% depth  → X ∈ [-W/2,  0 ],  Z ∈ [0.1D, D/2]
+        //
+        //  Step-front wall: Z = 0.1D,  X ∈ [0, W/2]   (exposed front of right main-wing portion)
+        //  Step-right wall: X = 0,     Z ∈ [0.1D, D/2] (exposed right side of corner wing)
+        if (buildingShape == "l-shape")
+        {
+            double stepZ = footprintDepth * 0.6 - footprintDepth / 2; // = 0.1 * footprintDepth
+            double stepX = footprintWidth  * 0.5 - footprintWidth  / 2; // = 0.0
+
+            // Step-front: room whose front edge (roomMaxZ) sits on the step,
+            // AND whose left edge is at or past the step-X column (right portion, no corner wing above).
+            if (Math.Abs(roomMaxZ - stepZ) < tolerance && roomMinX >= stepX - tolerance)
+            {
+                walls.Add(new ExteriorWall
+                {
+                    Direction = WallDirection.Front,
+                    Length = room.Width,
+                    CenterX = roomCenterX,
+                    CenterZ = roomMaxZ,
+                    FacingZ = 0.1
+                });
+            }
+
+            // Step-right: room whose right edge (roomMaxX) sits on the step-X column,
+            // AND whose bottom edge is in the corner-wing zone (Z >= stepZ).
+            if (Math.Abs(roomMaxX - stepX) < tolerance && roomMinZ >= stepZ - tolerance)
+            {
+                walls.Add(new ExteriorWall
+                {
+                    Direction = WallDirection.Right,
+                    Length = room.Depth,
+                    CenterX = roomMaxX,
+                    CenterZ = roomCenterZ,
+                    FacingX = 0.1
+                });
+            }
         }
 
         return walls;

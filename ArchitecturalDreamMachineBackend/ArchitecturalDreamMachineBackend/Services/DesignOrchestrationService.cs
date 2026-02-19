@@ -84,15 +84,17 @@ namespace ArchitecturalDreamMachineBackend.Services
                 parameters.WindowToWallRatio,
                 parameters.CeilingHeight,
                 parameters.FootprintWidth,
-                parameters.FootprintDepth);
-            
+                parameters.FootprintDepth,
+                parameters.BuildingShape);
+
             // Step 4b: Generate window elements with wall relationships for BIM export
             var windowElements = _windowService.GenerateWindowElements(
                 parameters.Rooms,
                 parameters.WindowToWallRatio,
                 parameters.CeilingHeight,
                 parameters.FootprintWidth,
-                parameters.FootprintDepth);
+                parameters.FootprintDepth,
+                parameters.BuildingShape);
             
             // Step 5: Generate interior walls
             var interiorWalls = _interiorWallService.GenerateInteriorWalls(
@@ -145,7 +147,8 @@ namespace ArchitecturalDreamMachineBackend.Services
                 parameters.CeilingHeight,
                 parameters.FootprintWidth,
                 parameters.FootprintDepth,
-                exteriorWallSegments);
+                exteriorWallSegments,
+                parameters.BuildingShape);
 
             var linkedDoors = _interiorWallService.GenerateLinkedDoorElements(
                 parameters.Rooms,
