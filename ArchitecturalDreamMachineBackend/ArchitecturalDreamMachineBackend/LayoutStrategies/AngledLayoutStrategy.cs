@@ -4,9 +4,11 @@ namespace ArchitecturalDreamMachineBackend.LayoutStrategies
 {
     /// <summary>
     /// Angled/rotated modern design layout
-    /// Main tower with angled wing for architectural interest
-    /// PORTED FROM HouseViewer3D.js lines 510-523
-    /// Note: Rotation handled by frontend rendering, backend just provides dimensions
+    /// Main tower: single section spanning all stories (70% footprint size).
+    /// Angled wing: single first-floor addition offset from the tower (50% size).
+    /// Single-section tower removes per-floor coplanar side-wall Z-fighting.
+    /// Note: The wing is geometrically a shifted box; an actual 30° rotation would
+    /// require frontend support that is not currently implemented.
     /// </summary>
     public class AngledLayoutStrategy : ILayoutStrategy
     {
@@ -16,34 +18,30 @@ namespace ArchitecturalDreamMachineBackend.LayoutStrategies
             double ceilingHeight,
             int stories)
         {
+            double totalHeight = ceilingHeight * stories;
+
             var layout = new LayoutData
             {
                 TotalWidth = footprintWidth,
                 TotalDepth = footprintDepth,
-                TotalHeight = ceilingHeight * stories,
+                TotalHeight = totalHeight,
                 Shape = "angled"
             };
-            
-            // Main vertical tower - stacked floors (70% size)
-            for (int floor = 1; floor <= stories; floor++)
+
+            // Main tower — single section spanning all stories (70% size)
+            layout.Sections.Add(new LayoutSection
             {
-                double floorY = (floor - 0.5) * ceilingHeight;
-                
-                layout.Sections.Add(new LayoutSection
-                {
-                    Width = footprintWidth * 0.7,
-                    Height = ceilingHeight,
-                    Depth = footprintDepth * 0.7,
-                    X = 0,
-                    Y = floorY,
-                    Z = 0,
-                    Floor = floor,
-                    AddWindows = true
-                });
-            }
-            
-            // Angled wing on first floor only (50% size, offset)
-            // Note: Rotation by 30 degrees (Math.PI / 6) should be handled in frontend
+                Width = footprintWidth * 0.7,
+                Height = totalHeight,
+                Depth = footprintDepth * 0.7,
+                X = 0,
+                Y = totalHeight / 2,
+                Z = 0,
+                Floor = 1,
+                AddWindows = true
+            });
+
+            // Angled wing on first floor only (50% size, offset to front-right)
             layout.Sections.Add(new LayoutSection
             {
                 Width = footprintWidth * 0.5,
@@ -55,17 +53,17 @@ namespace ArchitecturalDreamMachineBackend.LayoutStrategies
                 Floor = 1,
                 AddWindows = true
             });
-            
+
             // Roof on main tower
             layout.RoofSections.Add(new RoofSection
             {
                 Width = footprintWidth * 0.7,
                 Depth = footprintDepth * 0.7,
                 X = 0,
-                Y = ceilingHeight * stories,
+                Y = totalHeight,
                 Z = 0
             });
-            
+
             // Roof on angled wing
             layout.RoofSections.Add(new RoofSection
             {
@@ -75,7 +73,7 @@ namespace ArchitecturalDreamMachineBackend.LayoutStrategies
                 Y = ceilingHeight,
                 Z = footprintDepth * 0.4
             });
-            
+
             return layout;
         }
     }
