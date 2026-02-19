@@ -61,7 +61,7 @@ export class GeometryRenderer {
     );
     
     const mesh = new THREE.Mesh(geometry, material);
-    
+
     // Apply position if provided by backend
     if (geometryData.position) {
       mesh.position.set(
@@ -70,7 +70,16 @@ export class GeometryRenderer {
         geometryData.position.z || 0
       );
     }
-    
+
+    // Apply rotation if provided by backend (e.g. windows on left/right walls use rotation.y = PI/2)
+    if (geometryData.rotation) {
+      mesh.rotation.set(
+        geometryData.rotation.x || 0,
+        geometryData.rotation.y || 0,
+        geometryData.rotation.z || 0
+      );
+    }
+
     return mesh;
   }
 
@@ -158,6 +167,8 @@ export class GeometryRenderer {
       buildingGeometry.sections.forEach((sectionData, index) => {
         const mesh = this.createMeshFromGeometry(sectionData);
         if (mesh) {
+          // Exterior box - render from outside only so interior geometry doesn't bleed through
+          mesh.material.side = THREE.FrontSide;
           mesh.castShadow = true;
           mesh.receiveShadow = true;
           mesh.name = `section_${index}`;
