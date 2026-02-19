@@ -433,6 +433,19 @@ public class HouseParametersService : IHouseParametersService
             }
         }
 
+        // Ensure every story from 3 upward has rooms so WindowService generates
+        // windows on all levels (it iterates by room floor group).
+        var maxFloor = rooms.Any() ? rooms.Max(r => r.Floor) : 1;
+        for (int floor = maxFloor + 1; floor <= stories; floor++)
+        {
+            rooms.Add(new Room { Name = $"Upper Bedroom {floor - 1}", Floor = floor,
+                X = 0, Z = 0, Width = width * 0.5, Depth = depth * 0.6,
+                WindowCount = 2, HasDoor = true });
+            rooms.Add(new Room { Name = $"Upper Room {floor - 1}", Floor = floor,
+                X = width * 0.5, Z = 0, Width = width * 0.5, Depth = depth * 0.6,
+                WindowCount = 1, HasDoor = true });
+        }
+
         return rooms;
     }
 
@@ -520,6 +533,19 @@ public class HouseParametersService : IHouseParametersService
                 X = cornerWidth * 0.5, Z = backDepth,
                 Width = cornerWidth * 0.5, Depth = frontDepth,
                 WindowCount = 0, HasDoor = true });
+        }
+
+        // Ensure every story from 3 upward has rooms so WindowService generates
+        // windows on all levels (it iterates by room floor group).
+        var maxFloor = rooms.Any() ? rooms.Max(r => r.Floor) : 1;
+        for (int floor = maxFloor + 1; floor <= stories; floor++)
+        {
+            rooms.Add(new Room { Name = $"Upper Bedroom {floor - 1}", Floor = floor,
+                X = 0, Z = 0, Width = cornerWidth, Depth = backDepth,
+                WindowCount = 2, HasDoor = true });
+            rooms.Add(new Room { Name = $"Upper Room {floor - 1}", Floor = floor,
+                X = cornerWidth, Z = 0, Width = cornerWidth, Depth = backDepth,
+                WindowCount = 1, HasDoor = true });
         }
 
         return rooms;
