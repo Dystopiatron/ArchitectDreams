@@ -16,14 +16,16 @@ namespace ArchitecturalDreamMachineBackend.Services
         private readonly IRoofService _roofService;
         private readonly IWindowService _windowService;
         private readonly IInteriorWallService _interiorWallService;
+        private readonly IWallFaceService _wallFaceService;
         private readonly ILogger<DesignOrchestrationService> _logger;
-        
+
         public DesignOrchestrationService(
             IGeometryService geometryService,
             ILayoutService layoutService,
             IRoofService roofService,
             IWindowService windowService,
             IInteriorWallService interiorWallService,
+            IWallFaceService wallFaceService,
             ILogger<DesignOrchestrationService> logger)
         {
             _geometryService = geometryService;
@@ -31,6 +33,7 @@ namespace ArchitecturalDreamMachineBackend.Services
             _roofService = roofService;
             _windowService = windowService;
             _interiorWallService = interiorWallService;
+            _wallFaceService = wallFaceService;
             _logger = logger;
         }
         
@@ -121,6 +124,14 @@ namespace ArchitecturalDreamMachineBackend.Services
                 interiorWalls  = interiorWalls.Where(w  => IsWithinAnySectionXZ(w.Position?.X ?? 0, w.Position?.Z ?? 0, layout.Sections)).ToList();
             }
 
+            // Step 5d: Generate perforated wall face panels for Three.js ShapeGeometry rendering
+            var wallFaces = _wallFaceService.GenerateWallFaces(
+                layout.Sections,
+                windowElements,
+                doorElements,
+                parameters.ExteriorMaterial,
+                parameters.Material?.Color ?? "white");
+
             // Step 6: Calculate total height and max dimension
             var maxRoofHeight = roofGeometries.Any() ? roofGeometries.Max(r => r.Height) : 0;
             var totalHeight = layout.TotalHeight + maxRoofHeight;
@@ -180,6 +191,7 @@ namespace ArchitecturalDreamMachineBackend.Services
                 WindowElements = windowElements,
                 InteriorWalls = interiorWalls,
                 DoorElements = doorElements,
+                WallFaces = wallFaces,
                 TotalHeight = totalHeight,
                 MaxDimension = maxDimension,
                 SemanticModel = semanticModel

@@ -114,6 +114,13 @@ namespace ArchitecturalDreamMachineBackend.Models
         /// Null when not computed (e.g. lightweight renders).
         /// </summary>
         public BuildingModel? SemanticModel { get; set; }
+
+        /// <summary>
+        /// Perforated wall face panels for Three.js ShapeGeometry rendering.
+        /// Each entry is one exterior face of one section with openings (windows/doors)
+        /// expressed as 2D cutouts in face-local coordinates.
+        /// </summary>
+        public List<WallFaceData> WallFaces { get; set; } = new();
     }
     
     /// <summary>
