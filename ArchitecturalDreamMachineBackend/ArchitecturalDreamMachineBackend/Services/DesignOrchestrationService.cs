@@ -110,6 +110,15 @@ namespace ArchitecturalDreamMachineBackend.Services
                 parameters.FootprintDepth,
                 parameters.BuildingShape);
             
+            // Step 5c: For non-rectangular layouts (L-shape, angled, split-level) filter out
+            // windows and interior walls whose XZ position falls outside all building sections.
+            // This prevents floating geometry in the "void" areas of compound footprints.
+            if (layout.Sections.Count > 1 || parameters.BuildingShape is "l-shape" or "angled" or "split-level")
+            {
+                windows        = windows.Where(w        => IsWithinAnySectionXZ(w.Position?.X ?? 0, w.Position?.Z ?? 0, layout.Sections)).ToList();
+                interiorWalls  = interiorWalls.Where(w  => IsWithinAnySectionXZ(w.Position?.X ?? 0, w.Position?.Z ?? 0, layout.Sections)).ToList();
+            }
+
             // Step 6: Calculate total height and max dimension
             var maxRoofHeight = roofGeometries.Any() ? roofGeometries.Max(r => r.Height) : 0;
             var totalHeight = layout.TotalHeight + maxRoofHeight;
@@ -238,6 +247,23 @@ namespace ArchitecturalDreamMachineBackend.Services
                 HasEaves = parameters.HasEaves,
                 EavesOverhang = parameters.EavesOverhang
             };
+        }
+
+        /// <summary>
+        /// Returns true if the point (x, z) falls within the horizontal (XZ) bounds
+        /// of at least one building section.  Tolerance accounts for windows placed
+        /// just outside the wall surface (~0.1 ft offset) plus wall thickness.
+        /// </summary>
+        private static bool IsWithinAnySectionXZ(
+            double x, double z,
+            List<LayoutSection> sections,
+            double tolerance = 1.5)
+        {
+            return sections.Any(s =>
+                x >= s.X - s.Width  / 2 - tolerance &&
+                x <= s.X + s.Width  / 2 + tolerance &&
+                z >= s.Z - s.Depth / 2 - tolerance &&
+                z <= s.Z + s.Depth / 2 + tolerance);
         }
     }
 }
