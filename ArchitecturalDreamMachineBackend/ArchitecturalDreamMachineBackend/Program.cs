@@ -44,6 +44,7 @@ builder.Services.AddScoped<ILayoutService, LayoutService>();
 builder.Services.AddScoped<IRoofService, RoofService>();
 builder.Services.AddScoped<IWindowService, WindowService>();
 builder.Services.AddScoped<IInteriorWallService, InteriorWallService>();
+builder.Services.AddScoped<IWallFaceService, WallFaceService>();
 builder.Services.AddScoped<IDesignOrchestrationService, DesignOrchestrationService>();
 builder.Services.AddScoped<IHouseParametersService, HouseParametersService>();
 builder.Services.AddScoped<IIfcExporter, IfcExporter>();

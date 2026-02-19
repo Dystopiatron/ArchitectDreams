@@ -4,7 +4,9 @@ namespace ArchitecturalDreamMachineBackend.LayoutStrategies
 {
     /// <summary>
     /// Two-story building layout
-    /// Single rectangular footprint, multiple floors stacked
+    /// Single rectangular footprint, all stories in one section to avoid
+    /// per-floor coplanar side-wall Z-fighting.
+    /// Story count is still honoured (affects total height and window placement).
     /// </summary>
     public class TwoStoryLayoutStrategy : ILayoutStrategy
     {
@@ -14,42 +16,39 @@ namespace ArchitecturalDreamMachineBackend.LayoutStrategies
             double ceilingHeight,
             int stories)
         {
+            double totalHeight = ceilingHeight * stories;
+
             var layout = new LayoutData
             {
                 TotalWidth = footprintWidth,
                 TotalDepth = footprintDepth,
-                TotalHeight = ceilingHeight * stories,
+                TotalHeight = totalHeight,
                 Shape = "two-story"
             };
-            
-            // Create section for each floor
-            for (int floor = 1; floor <= stories; floor++)
+
+            // Single section spanning all stories — no coplanar side walls
+            layout.Sections.Add(new LayoutSection
             {
-                double floorY = (floor - 0.5) * ceilingHeight;
-                
-                layout.Sections.Add(new LayoutSection
-                {
-                    Width = footprintWidth,
-                    Height = ceilingHeight,
-                    Depth = footprintDepth,
-                    X = 0,
-                    Y = floorY,
-                    Z = 0,
-                    Floor = floor,
-                    AddWindows = true
-                });
-            }
-            
+                Width = footprintWidth,
+                Height = totalHeight,
+                Depth = footprintDepth,
+                X = 0,
+                Y = totalHeight / 2,
+                Z = 0,
+                Floor = 1,
+                AddWindows = true
+            });
+
             // Single roof on top
             layout.RoofSections.Add(new RoofSection
             {
                 Width = footprintWidth,
                 Depth = footprintDepth,
                 X = 0,
-                Y = ceilingHeight * stories,
+                Y = totalHeight,
                 Z = 0
             });
-            
+
             return layout;
         }
     }

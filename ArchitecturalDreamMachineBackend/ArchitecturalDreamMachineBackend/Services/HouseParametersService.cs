@@ -117,8 +117,10 @@ public class HouseParametersService : IHouseParametersService
     {
         var rooms = new List<Room>();
 
-        // Generate rooms for full footprint dimensions
-        // Frontend will handle filtering walls based on actual building shape
+        // L-shape requires rooms constrained to the two-wing footprint so that windows
+        // and interior walls don't appear in the void (front-right) quadrant.
+        if (shape == "l-shape")
+            return GenerateLShapeRoomLayout(width, depth, roomCount, stories);
 
         if (roomCount <= 3)
         {
@@ -429,6 +431,130 @@ public class HouseParametersService : IHouseParametersService
                     });
                 }
             }
+        }
+
+        // Ensure every story from 3 upward has rooms so WindowService generates
+        // windows on all levels (it iterates by room floor group).
+        var maxFloor = rooms.Any() ? rooms.Max(r => r.Floor) : 1;
+        for (int floor = maxFloor + 1; floor <= stories; floor++)
+        {
+            rooms.Add(new Room { Name = $"Upper Bedroom {floor - 1}", Floor = floor,
+                X = 0, Z = 0, Width = width * 0.5, Depth = depth * 0.6,
+                WindowCount = 2, HasDoor = true });
+            rooms.Add(new Room { Name = $"Upper Room {floor - 1}", Floor = floor,
+                X = width * 0.5, Z = 0, Width = width * 0.5, Depth = depth * 0.6,
+                WindowCount = 1, HasDoor = true });
+        }
+
+        return rooms;
+    }
+
+    /// <summary>
+    /// Generate rooms constrained to the L-shape footprint.
+    /// Main wing:   X ∈ [0, W],     Z ∈ [0, 0.6D]  (full width, back 60%)
+    /// Corner wing: X ∈ [0, 0.5W],  Z ∈ [0.6D, D]  (left half, front 40%)
+    /// No room spans into the void (front-right quadrant).
+    /// </summary>
+    private static List<Room> GenerateLShapeRoomLayout(
+        double width, double depth, int roomCount, int stories)
+    {
+        double backDepth   = depth * 0.6;  // main wing Z depth
+        double frontDepth  = depth * 0.4;  // corner wing Z depth
+        double cornerWidth = width * 0.5;  // corner wing width
+
+        var rooms = new List<Room>();
+
+        if (roomCount <= 3 || stories == 1)
+        {
+            // Two rooms in main wing, one or more in corner wing
+            rooms.Add(new Room { Name = "Living Room", Floor = 1,
+                X = 0, Z = 0, Width = cornerWidth, Depth = backDepth,
+                WindowCount = 2, HasDoor = true });
+            rooms.Add(new Room { Name = "Kitchen", Floor = 1,
+                X = cornerWidth, Z = 0, Width = cornerWidth, Depth = backDepth,
+                WindowCount = 3, HasDoor = true });
+            rooms.Add(new Room { Name = "Bedroom", Floor = 1,
+                X = 0, Z = backDepth, Width = cornerWidth * 0.5, Depth = frontDepth,
+                WindowCount = 1, HasDoor = true });
+            if (roomCount >= 4)
+                rooms.Add(new Room { Name = "Bathroom", Floor = 1,
+                    X = cornerWidth * 0.5, Z = backDepth,
+                    Width = cornerWidth * 0.5, Depth = frontDepth,
+                    WindowCount = 0, HasDoor = true });
+        }
+        else if (roomCount <= 5)
+        {
+            // Floor 1: 2 main-wing rooms + 1 corner-wing room
+            rooms.Add(new Room { Name = "Living Room", Floor = 1,
+                X = 0, Z = 0, Width = cornerWidth, Depth = backDepth,
+                WindowCount = 2, HasDoor = true });
+            rooms.Add(new Room { Name = "Kitchen", Floor = 1,
+                X = cornerWidth, Z = 0, Width = cornerWidth, Depth = backDepth,
+                WindowCount = 3, HasDoor = true });
+            rooms.Add(new Room { Name = "Powder Room", Floor = 1,
+                X = 0, Z = backDepth, Width = cornerWidth, Depth = frontDepth,
+                WindowCount = 0, HasDoor = true });
+            // Floor 2: 2 bedrooms in main wing + 1 study in corner wing
+            rooms.Add(new Room { Name = "Master Bedroom", Floor = 2,
+                X = 0, Z = 0, Width = cornerWidth, Depth = backDepth,
+                WindowCount = 2, HasDoor = true });
+            rooms.Add(new Room { Name = "Bedroom 2", Floor = 2,
+                X = cornerWidth, Z = 0, Width = cornerWidth, Depth = backDepth,
+                WindowCount = 3, HasDoor = true });
+            rooms.Add(new Room { Name = "Study", Floor = 2,
+                X = 0, Z = backDepth, Width = cornerWidth, Depth = frontDepth,
+                WindowCount = 3, HasDoor = true });
+        }
+        else
+        {
+            // 6+ rooms: 4 on Floor 1, 4 on Floor 2
+            double mainThird = width / 3;
+            // Floor 1: 3 main-wing rooms + 1 corner-wing room
+            rooms.Add(new Room { Name = "Living Room", Floor = 1,
+                X = 0, Z = 0, Width = mainThird, Depth = backDepth,
+                WindowCount = 2, HasDoor = true });
+            rooms.Add(new Room { Name = "Dining Room", Floor = 1,
+                X = mainThird, Z = 0, Width = mainThird, Depth = backDepth,
+                WindowCount = 1, HasDoor = true });
+            rooms.Add(new Room { Name = "Kitchen", Floor = 1,
+                X = mainThird * 2, Z = 0, Width = mainThird, Depth = backDepth,
+                WindowCount = 3, HasDoor = true });
+            rooms.Add(new Room { Name = "Entry", Floor = 1,
+                X = 0, Z = backDepth, Width = cornerWidth, Depth = frontDepth,
+                WindowCount = 3, HasDoor = true });
+            // Floor 2: 2 main-wing bedrooms + 2 corner-wing rooms
+            rooms.Add(new Room { Name = "Master Bedroom", Floor = 2,
+                X = 0, Z = 0, Width = cornerWidth, Depth = backDepth,
+                WindowCount = 2, HasDoor = true });
+            rooms.Add(new Room { Name = "Bedroom 2", Floor = 2,
+                X = cornerWidth, Z = 0, Width = cornerWidth, Depth = backDepth,
+                WindowCount = 3, HasDoor = true });
+            rooms.Add(new Room { Name = "Bedroom 3", Floor = 2,
+                X = 0, Z = backDepth, Width = cornerWidth * 0.5, Depth = frontDepth,
+                WindowCount = 1, HasDoor = true });
+            rooms.Add(new Room { Name = "Bathroom", Floor = 2,
+                X = cornerWidth * 0.5, Z = backDepth,
+                Width = cornerWidth * 0.5, Depth = frontDepth,
+                WindowCount = 2, HasDoor = true });
+        }
+
+        // Ensure every story from 3 upward has rooms in both wings so WindowService
+        // generates windows on all levels and all exterior faces (including step walls).
+        var maxFloor = rooms.Any() ? rooms.Max(r => r.Floor) : 1;
+        for (int floor = maxFloor + 1; floor <= stories; floor++)
+        {
+            // Main wing — left half (Back + Left walls)
+            rooms.Add(new Room { Name = $"Upper Bedroom {floor - 1}", Floor = floor,
+                X = 0, Z = 0, Width = cornerWidth, Depth = backDepth,
+                WindowCount = 2, HasDoor = true });
+            // Main wing — right half (Back + Right + Step-front walls → 3 windows)
+            rooms.Add(new Room { Name = $"Upper Room {floor - 1}", Floor = floor,
+                X = cornerWidth, Z = 0, Width = cornerWidth, Depth = backDepth,
+                WindowCount = 3, HasDoor = true });
+            // Corner wing (Front + Left + Step-right walls → 3 windows)
+            rooms.Add(new Room { Name = $"Upper Corner {floor - 1}", Floor = floor,
+                X = 0, Z = backDepth, Width = cornerWidth, Depth = frontDepth,
+                WindowCount = 3, HasDoor = true });
         }
 
         return rooms;

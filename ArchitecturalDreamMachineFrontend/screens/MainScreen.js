@@ -162,9 +162,8 @@ export default function MainScreen() {
               onValueChange={setLayoutType}
               pickerStyle={styles.picker}
               items={[
-                { value: 'auto', label: '🎲 Auto (Based on Lot Size)' },
+                { value: 'auto', label: '🎲 Auto (Based on Style)' },
                 { value: 'cube', label: '🟦 Traditional Cube' },
-                { value: 'two-story', label: '🏢 Two-Story (Compact Upper)' },
                 { value: 'l-shape', label: '🔲 L-Shaped' },
                 { value: 'split-level', label: '📐 Split-Level' },
                 { value: 'angled', label: '↗️ Angled Modern' },

@@ -61,7 +61,7 @@ export class GeometryRenderer {
     );
     
     const mesh = new THREE.Mesh(geometry, material);
-    
+
     // Apply position if provided by backend
     if (geometryData.position) {
       mesh.position.set(
@@ -70,7 +70,82 @@ export class GeometryRenderer {
         geometryData.position.z || 0
       );
     }
-    
+
+    // Apply rotation if provided by backend (e.g. windows on left/right walls use rotation.y = PI/2)
+    if (geometryData.rotation) {
+      mesh.rotation.set(
+        geometryData.rotation.x || 0,
+        geometryData.rotation.y || 0,
+        geometryData.rotation.z || 0
+      );
+    }
+
+    return mesh;
+  }
+
+  /**
+   * Create a Three.js mesh for one exterior wall face panel with punched-out
+   * openings (windows and doors).  Uses THREE.ShapeGeometry with holes so the
+   * openings are true geometric cut-outs, not quads placed on top.
+   *
+   * THREE.ShapeGeometry lives in the XY plane facing +Z.  RotationY aligns
+   * each face to its correct world orientation:
+   *   0      → Front  (faces +Z)
+   *   π      → Back   (faces −Z)
+   *  −π/2    → Right  (faces +X)
+   *   π/2    → Left   (faces −X)
+   *
+   * Position (x, y, z): x/z = world face centre; y = section base (floor level).
+   * Shape Y axis goes 0 → height (base to top of face).
+   *
+   * @param {Object} faceData - WallFaceData from backend
+   * @returns {THREE.Mesh}
+   */
+  static createWallFacePanel(faceData) {
+    if (!faceData || !faceData.width || !faceData.height) {
+      console.warn('Invalid wall face data:', faceData);
+      return null;
+    }
+
+    const hw = faceData.width / 2;
+
+    // Outer wall shape (centered horizontally, 0..height vertically)
+    const shape = new THREE.Shape();
+    shape.moveTo(-hw, 0);
+    shape.lineTo( hw, 0);
+    shape.lineTo( hw, faceData.height);
+    shape.lineTo(-hw, faceData.height);
+    shape.closePath();
+
+    // Punch a rectangular hole for each opening
+    (faceData.openings || []).forEach(op => {
+      if (!op.width || !op.height) return;
+      const hole = new THREE.Path();
+      const ox   = op.offsetX;
+      const oy   = op.offsetY; // vertical centre from base
+      const hw2  = op.width  / 2;
+      const hh2  = op.height / 2;
+      hole.moveTo(ox - hw2, oy - hh2);
+      hole.lineTo(ox + hw2, oy - hh2);
+      hole.lineTo(ox + hw2, oy + hh2);
+      hole.lineTo(ox - hw2, oy + hh2);
+      hole.closePath();
+      shape.holes.push(hole);
+    });
+
+    const geometry = new THREE.ShapeGeometry(shape);
+    const material = this.createMaterial(
+      faceData.materialType || 'stucco',
+      faceData.color         || '#ffffff'
+    );
+    material.side = THREE.DoubleSide; // solid wall areas visible from all angles; holes are geometry cut-outs
+
+    const mesh = new THREE.Mesh(geometry, material);
+    // y = section base; ShapeGeometry Y goes 0→height from that base
+    mesh.position.set(faceData.x, faceData.y, faceData.z);
+    mesh.rotation.y = faceData.rotationY;
+    mesh.castShadow    = true;
+    mesh.receiveShadow = true;
     return mesh;
   }
 
@@ -158,6 +233,10 @@ export class GeometryRenderer {
       buildingGeometry.sections.forEach((sectionData, index) => {
         const mesh = this.createMeshFromGeometry(sectionData);
         if (mesh) {
+          // FrontSide: section box provides solid-wall fallback for any face where
+          // the wall-face panel was suppressed (interior seam).  Face panels (0.02 ft
+          // proud) overlay it with true window/door holes wherever they exist.
+          mesh.material.side = THREE.FrontSide;
           mesh.castShadow = true;
           mesh.receiveShadow = true;
           mesh.name = `section_${index}`;
@@ -187,6 +266,17 @@ export class GeometryRenderer {
           mesh.castShadow = false;
           mesh.receiveShadow = false;
           mesh.name = `window_${index}`;
+          houseGroup.add(mesh);
+        }
+      });
+    }
+
+    // Add perforated wall face panels (ShapeGeometry with window/door holes)
+    if (buildingGeometry.wallFaces && Array.isArray(buildingGeometry.wallFaces)) {
+      buildingGeometry.wallFaces.forEach((faceData, index) => {
+        const mesh = this.createWallFacePanel(faceData);
+        if (mesh) {
+          mesh.name = `wall_face_${index}`;
           houseGroup.add(mesh);
         }
       });
