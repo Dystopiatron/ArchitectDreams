@@ -47,7 +47,7 @@ namespace ArchitecturalDreamMachineBackend.RoofStrategies
                 Pitch = 0
             };
             
-            // Add parapet walls if specified (Brutalist style)
+            // Add parapet walls if specified (Brutalist/Modern style)
             if (hasParapet)
             {
                 var parapets = _geometryService.CreateParapetWalls(
@@ -66,9 +66,8 @@ namespace ArchitecturalDreamMachineBackend.RoofStrategies
                     }
                 }
                 
-                // Store parapets in a way that can be retrieved
-                // (For now, we'll need to handle this in orchestration)
-                // This is a limitation of current structure - parapets are separate geometries
+                // Store parapets in the roof geometry for rendering
+                roofGeometry.Parapets = parapets;
             }
             
             return roofGeometry;

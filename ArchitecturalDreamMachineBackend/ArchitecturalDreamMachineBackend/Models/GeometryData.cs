@@ -147,5 +147,10 @@ namespace ArchitecturalDreamMachineBackend.Models
         /// Roof pitch (rise over run, e.g., 8.0 for 8:12)
         /// </summary>
         public double Pitch { get; set; }
+        
+        /// <summary>
+        /// Optional parapet wall geometries (for flat roofs)
+        /// </summary>
+        public List<GeometryData> Parapets { get; set; } = new();
     }
 }

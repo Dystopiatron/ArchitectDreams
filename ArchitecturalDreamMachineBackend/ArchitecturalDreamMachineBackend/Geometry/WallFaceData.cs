@@ -44,3 +44,13 @@ public class WallFaceData
     public string Color        { get; set; } = "white";
     public List<WallOpeningData> Openings { get; set; } = new();
 }
+
+/// <summary>
+/// Result of wall face generation: face panels + the set of window IDs
+/// that were successfully placed on visible (non-overlapped) face areas.
+/// </summary>
+public class WallFaceResult
+{
+    public List<WallFaceData> Faces { get; set; } = new();
+    public HashSet<string> PlacedWindowIds { get; set; } = new();
+}

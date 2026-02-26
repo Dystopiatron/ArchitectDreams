@@ -194,9 +194,24 @@ export class GeometryRenderer {
         });
       
       case 'wood':
+      case 'wood siding':
         return new THREE.MeshStandardMaterial({
           ...materialConfig,
           roughness: 0.7,
+          metalness: 0.0
+        });
+      
+      case 'stucco':
+        return new THREE.MeshStandardMaterial({
+          ...materialConfig,
+          roughness: 0.9,
+          metalness: 0.0
+        });
+      
+      case 'roof':
+        return new THREE.MeshStandardMaterial({
+          ...materialConfig,
+          roughness: 0.8,
           metalness: 0.0
         });
       
@@ -254,6 +269,19 @@ export class GeometryRenderer {
           mesh.receiveShadow = false; // Roofs don't receive shadows from above
           mesh.name = `roof_${index}`;
           houseGroup.add(mesh);
+        }
+        
+        // Add parapet walls (for flat roofs with parapets - Modern/Brutalist styles)
+        if (roofData.parapets && Array.isArray(roofData.parapets)) {
+          roofData.parapets.forEach((parapetData, pIndex) => {
+            const parapetMesh = this.createMeshFromGeometry(parapetData);
+            if (parapetMesh) {
+              parapetMesh.castShadow = true;
+              parapetMesh.receiveShadow = true;
+              parapetMesh.name = `parapet_${index}_${pIndex}`;
+              houseGroup.add(parapetMesh);
+            }
+          });
         }
       });
     }
