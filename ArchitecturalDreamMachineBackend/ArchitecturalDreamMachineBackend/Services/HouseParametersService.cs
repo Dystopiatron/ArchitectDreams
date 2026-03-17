@@ -125,6 +125,11 @@ public class HouseParametersService : IHouseParametersService
         if (shape == "l-shape")
             return GenerateLShapeRoomLayout(width, depth, roomCount, stories);
 
+        // Angled layout has a wing at (+0.4W, +0.4D) that extends beyond the main footprint.
+        // Standard room generation doesn't place rooms there, so we need custom layout.
+        if (shape == "angled")
+            return GenerateAngledRoomLayout(width, depth, roomCount, stories);
+
         if (roomCount <= 3)
         {
             // Small house: living, bedroom, bath
@@ -557,6 +562,97 @@ public class HouseParametersService : IHouseParametersService
             // Corner wing (Front + Left + Step-right walls → 3 windows)
             rooms.Add(new Room { Name = $"Upper Corner {floor - 1}", Floor = floor,
                 X = 0, Z = backDepth, Width = cornerWidth, Depth = frontDepth,
+                WindowCount = 3, HasDoor = true });
+        }
+
+        return rooms;
+    }
+
+    /// <summary>
+    /// Generate room layout for angled buildings.
+    /// The angled layout has a main tower (70% at center) and a wing (50% at +0.4W, +0.4D).
+    /// The wing extends beyond the main footprint, so we need a dedicated room for windows.
+    /// </summary>
+    private static List<Room> GenerateAngledRoomLayout(
+        double width, double depth, int roomCount, int stories)
+    {
+        // Main tower: 70% of footprint, centered at origin
+        double towerW = width * 0.7;
+        double towerD = depth * 0.7;
+        // In 0-based room coords, the tower spans from 0.15*footprint to 0.85*footprint
+        double towerMinX = (width - towerW) / 2;   // 0.15W
+        double towerMinZ = (depth - towerD) / 2;   // 0.15D
+
+        // Wing: 50% of footprint, offset at (+0.4W, +0.4D) building coords
+        // In 0-based room coords: center at (0.9W, 0.9D), size 50%
+        // The wing extends from 0.65W to 1.15W, but we can only define rooms within 0..footprint.
+        // So we create a room at the corner (0.65W to W, 0.65D to D) which will be clamped to wing.
+        double wingRoomX = width * 0.65;
+        double wingRoomZ = depth * 0.65;
+        double wingRoomW = width * 0.35;  // Goes to edge of footprint
+        double wingRoomD = depth * 0.35;
+
+        var rooms = new List<Room>();
+
+        if (stories == 1 || roomCount <= 3)
+        {
+            // Simple layout: main room in tower + sunroom in wing
+            rooms.Add(new Room { Name = "Living Room", Floor = 1,
+                X = towerMinX, Z = towerMinZ, Width = towerW * 0.6, Depth = towerD,
+                WindowCount = 3, HasDoor = true });
+            rooms.Add(new Room { Name = "Kitchen", Floor = 1,
+                X = towerMinX + towerW * 0.6, Z = towerMinZ, Width = towerW * 0.4, Depth = towerD * 0.6,
+                WindowCount = 2, HasDoor = true });
+            rooms.Add(new Room { Name = "Bedroom", Floor = 1,
+                X = towerMinX + towerW * 0.6, Z = towerMinZ + towerD * 0.6, Width = towerW * 0.4, Depth = towerD * 0.4,
+                WindowCount = 1, HasDoor = true });
+            // Wing sunroom - positioned to fill the wing section
+            rooms.Add(new Room { Name = "Sunroom", Floor = 1,
+                X = wingRoomX, Z = wingRoomZ, Width = wingRoomW, Depth = wingRoomD,
+                WindowCount = 4, HasDoor = true });
+        }
+        else
+        {
+            // Multi-story: rooms in tower for all floors + wing on floor 1
+            // Floor 1
+            rooms.Add(new Room { Name = "Living Room", Floor = 1,
+                X = towerMinX, Z = towerMinZ, Width = towerW * 0.6, Depth = towerD * 0.7,
+                WindowCount = 3, HasDoor = true });
+            rooms.Add(new Room { Name = "Kitchen", Floor = 1,
+                X = towerMinX + towerW * 0.6, Z = towerMinZ, Width = towerW * 0.4, Depth = towerD * 0.7,
+                WindowCount = 2, HasDoor = true });
+            rooms.Add(new Room { Name = "Powder Room", Floor = 1,
+                X = towerMinX, Z = towerMinZ + towerD * 0.7, Width = towerW, Depth = towerD * 0.3,
+                WindowCount = 1, HasDoor = true });
+            // Wing sunroom
+            rooms.Add(new Room { Name = "Sunroom", Floor = 1,
+                X = wingRoomX, Z = wingRoomZ, Width = wingRoomW, Depth = wingRoomD,
+                WindowCount = 4, HasDoor = true });
+
+            // Floor 2
+            rooms.Add(new Room { Name = "Master Bedroom", Floor = 2,
+                X = towerMinX, Z = towerMinZ, Width = towerW * 0.5, Depth = towerD * 0.6,
+                WindowCount = 2, HasDoor = true });
+            rooms.Add(new Room { Name = "Bedroom 2", Floor = 2,
+                X = towerMinX + towerW * 0.5, Z = towerMinZ, Width = towerW * 0.5, Depth = towerD * 0.6,
+                WindowCount = 2, HasDoor = true });
+            rooms.Add(new Room { Name = "Bathroom", Floor = 2,
+                X = towerMinX, Z = towerMinZ + towerD * 0.6, Width = towerW * 0.4, Depth = towerD * 0.4,
+                WindowCount = 1, HasDoor = true });
+            rooms.Add(new Room { Name = "Study", Floor = 2,
+                X = towerMinX + towerW * 0.4, Z = towerMinZ + towerD * 0.6, Width = towerW * 0.6, Depth = towerD * 0.4,
+                WindowCount = 2, HasDoor = true });
+        }
+
+        // Upper floors (3+): bedrooms spanning the tower only
+        var maxFloor = rooms.Any() ? rooms.Max(r => r.Floor) : 1;
+        for (int floor = maxFloor + 1; floor <= stories; floor++)
+        {
+            rooms.Add(new Room { Name = $"Upper Bedroom {floor - 1}", Floor = floor,
+                X = towerMinX, Z = towerMinZ, Width = towerW * 0.5, Depth = towerD,
+                WindowCount = 3, HasDoor = true });
+            rooms.Add(new Room { Name = $"Upper Room {floor - 1}", Floor = floor,
+                X = towerMinX + towerW * 0.5, Z = towerMinZ, Width = towerW * 0.5, Depth = towerD,
                 WindowCount = 3, HasDoor = true });
         }
 

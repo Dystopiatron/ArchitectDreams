@@ -82,13 +82,13 @@ namespace ArchitecturalDreamMachineBackend.Services
                 parameters.HasParapet);
             
             // Step 4: Generate windows
-            // For split-level, rooms are defined in full-footprint space but sections
-            // are narrower per floor. Generate windows per-section so that exterior wall
-            // detection uses the correct section dimensions.
+            // For split-level and angled layouts, rooms are defined in full-footprint space
+            // but sections are smaller/offset. Generate windows per-section so that exterior
+            // wall detection uses the correct section dimensions.
             List<GeometryData> windows;
             List<WindowElement> windowElements;
 
-            if (parameters.BuildingShape == "split-level" && layout.Sections.Count > 1)
+            if ((parameters.BuildingShape == "split-level" || parameters.BuildingShape == "angled") && layout.Sections.Count > 1)
             {
                 windows = new List<GeometryData>();
                 windowElements = new List<WindowElement>();
@@ -97,7 +97,37 @@ namespace ArchitecturalDreamMachineBackend.Services
                 {
                     var sectionRooms = ClampRoomsToSection(
                         parameters.Rooms, section,
-                        parameters.FootprintWidth, parameters.FootprintDepth);
+                        parameters.FootprintWidth, parameters.FootprintDepth,
+                        parameters.CeilingHeight);
+
+                    // For sections that extend beyond the footprint (like angled wing),
+                    // clamped rooms won't reach the actual exterior edges. Add a synthetic
+                    // room that fills the section to ensure windows on all exterior faces.
+                    bool sectionExtendsBeyondFootprint =
+                        section.X - section.Width / 2 < -parameters.FootprintWidth / 2 - 0.1 ||
+                        section.X + section.Width / 2 > parameters.FootprintWidth / 2 + 0.1 ||
+                        section.Z - section.Depth / 2 < -parameters.FootprintDepth / 2 - 0.1 ||
+                        section.Z + section.Depth / 2 > parameters.FootprintDepth / 2 + 0.1;
+
+                    if (sectionExtendsBeyondFootprint && section.AddWindows)
+                    {
+                        // Add a section-filling room to ensure windows on all exterior edges
+                        int floorsInSection = (int)(section.Height / parameters.CeilingHeight);
+                        for (int f = 1; f <= floorsInSection; f++)
+                        {
+                            sectionRooms.Add(new Room
+                            {
+                                Name = $"Wing Room {f}",
+                                Floor = f,
+                                X = 0,
+                                Z = 0,
+                                Width = section.Width,
+                                Depth = section.Depth,
+                                WindowCount = 4,
+                                HasDoor = false
+                            });
+                        }
+                    }
 
                     if (!sectionRooms.Any()) continue;
 
@@ -118,6 +148,7 @@ namespace ArchitecturalDreamMachineBackend.Services
                         parameters.WindowStyle);
 
                     // Offset from section-local to building-global coordinates
+                    // Windows are generated in section-centered coords, add section center to get building coords
                     foreach (var w in secWindows)
                     {
                         if (w.Position != null)
@@ -174,18 +205,15 @@ namespace ArchitecturalDreamMachineBackend.Services
                 parameters.BuildingShape);
             
             // Step 5c: For non-rectangular layouts (L-shape, angled, split-level) filter out
-            // windows and interior walls whose XZ position falls outside all building sections.
+            // windows and interior walls whose XYZ position falls outside all building sections.
             // This prevents floating geometry in the "void" areas of compound footprints.
+            // Important: We check XYZ together per section, not XZ and Y separately, because
+            // a point might be in one section's XZ footprint but another section's Y range.
             if (layout.Sections.Count > 1 || parameters.BuildingShape is "l-shape" or "angled" or "split-level")
             {
-                windows        = windows.Where(w        => IsWithinAnySectionXZ(w.Position?.X ?? 0, w.Position?.Z ?? 0, layout.Sections)).ToList();
-                windowElements = windowElements.Where(w => IsWithinAnySectionXZ(w.X, w.Z, layout.Sections)).ToList();
-                interiorWalls  = interiorWalls.Where(w  => IsWithinAnySectionXZ(w.Position?.X ?? 0, w.Position?.Z ?? 0, layout.Sections)).ToList();
-
-                // Also filter by Y bounds — catch stray geometry above/below all sections
-                windows        = windows.Where(w        => IsWithinAnySectionY(w.Position?.Y ?? 0, layout.Sections)).ToList();
-                windowElements = windowElements.Where(w => IsWithinAnySectionY(w.Y, layout.Sections)).ToList();
-                interiorWalls  = interiorWalls.Where(w  => IsWithinAnySectionY(w.Position?.Y ?? 0, layout.Sections)).ToList();
+                windows        = windows.Where(w        => IsWithinAnySectionXYZ(w.Position?.X ?? 0, w.Position?.Y ?? 0, w.Position?.Z ?? 0, layout.Sections)).ToList();
+                windowElements = windowElements.Where(w => IsWithinAnySectionXYZ(w.X, w.Y, w.Z, layout.Sections)).ToList();
+                interiorWalls  = interiorWalls.Where(w  => IsWithinAnySectionXYZ(w.Position?.X ?? 0, w.Position?.Y ?? 0, w.Position?.Z ?? 0, layout.Sections)).ToList();
             }
 
             // Step 5d: Generate perforated wall face panels for Three.js ShapeGeometry rendering
@@ -372,14 +400,38 @@ namespace ArchitecturalDreamMachineBackend.Services
         }
 
         /// <summary>
+        /// Returns true if the point (x, y, z) falls within the 3D bounds
+        /// of at least one building section. All three coordinates must be
+        /// within the SAME section's bounds (not a combination of different sections).
+        /// This is important for layouts like split-level where sections have different heights.
+        /// </summary>
+        private static bool IsWithinAnySectionXYZ(
+            double x, double y, double z,
+            List<LayoutSection> sections,
+            double tolerance = 0.5)
+        {
+            return sections.Any(s =>
+                x >= s.X - s.Width  / 2 - tolerance &&
+                x <= s.X + s.Width  / 2 + tolerance &&
+                y >= s.Y - s.Height / 2 - tolerance &&
+                y <= s.Y + s.Height / 2 + tolerance &&
+                z >= s.Z - s.Depth / 2 - tolerance &&
+                z <= s.Z + s.Depth / 2 + tolerance);
+        }
+
+        /// <summary>
         /// Clamp rooms to a section's XZ bounds and convert to section-local 0-based coordinates.
         /// Rooms are defined in full-footprint 0-based space (X/Z ∈ [0, footprint]).
         /// This method clips each room to the section's world-space bounds and re-expresses
         /// coordinates so WindowService sees them as flush with the section edges.
+        /// 
+        /// For multi-story sections (like angled tower), includes rooms from ALL floors
+        /// that fall within the section's vertical Y range, not just the section.Floor.
         /// </summary>
         private static List<Room> ClampRoomsToSection(
             List<Room> rooms, LayoutSection section,
-            double footprintWidth, double footprintDepth)
+            double footprintWidth, double footprintDepth,
+            double ceilingHeight)
         {
             var result = new List<Room>();
 
@@ -388,9 +440,20 @@ namespace ArchitecturalDreamMachineBackend.Services
             double secMaxX = section.X + section.Width / 2;
             double secMinZ = section.Z - section.Depth / 2;
             double secMaxZ = section.Z + section.Depth / 2;
+            
+            // Section Y bounds
+            double secBaseY = section.Y - section.Height / 2;
+            double secTopY = section.Y + section.Height / 2;
 
-            foreach (var room in rooms.Where(r => r.Floor == section.Floor))
+            foreach (var room in rooms)
             {
+                // Check if room's floor falls within section's Y range
+                double roomFloorBaseY = (room.Floor - 1) * ceilingHeight;
+                double roomFloorTopY = room.Floor * ceilingHeight;
+                
+                // Room belongs to this section if there's vertical overlap
+                if (roomFloorTopY <= secBaseY || roomFloorBaseY >= secTopY)
+                    continue;
                 // Room bounds in building space (rooms are 0-based, translated by -footprint/2)
                 double roomBuildMinX = room.X - footprintWidth / 2;
                 double roomBuildMaxX = roomBuildMinX + room.Width;

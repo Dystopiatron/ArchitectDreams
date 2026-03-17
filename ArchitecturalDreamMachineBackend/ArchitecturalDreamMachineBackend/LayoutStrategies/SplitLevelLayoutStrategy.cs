@@ -4,10 +4,9 @@ namespace ArchitecturalDreamMachineBackend.LayoutStrategies
 {
     /// <summary>
     /// Split-level building layout.
-    /// One section per story, each with full ceiling height.
-    /// Odd floors (1, 3, 5…) use full footprint width.
-    /// Even floors (2, 4, 6…) use 60% width, offset right by 0.2W.
-    /// All sections share 70% footprint depth.
+    /// Main section: 2 stories, 50% of width on right side.
+    /// Side wing: 1 story, 50% of width on left side (garage/family room).
+    /// Sections touch at X=0, each extending to the footprint edge. Capped at 2 stories max.
     /// </summary>
     public class SplitLevelLayoutStrategy : ILayoutStrategy
     {
@@ -17,45 +16,72 @@ namespace ArchitecturalDreamMachineBackend.LayoutStrategies
             double ceilingHeight,
             int stories)
         {
-            double depth = footprintDepth * 0.7;
-            double totalHeight = stories * ceilingHeight;
+            // Cap at 2 stories for split-level
+            int effectiveStories = Math.Min(stories, 2);
+            double mainHeight = effectiveStories * ceilingHeight;
+            double wingHeight = ceilingHeight; // Always 1 story
 
             var layout = new LayoutData
             {
                 TotalWidth = footprintWidth,
                 TotalDepth = footprintDepth,
-                TotalHeight = totalHeight,
+                TotalHeight = mainHeight,
                 Shape = "split-level"
             };
 
-            for (int floor = 1; floor <= stories; floor++)
+            // Main section: 50% width on right side (X from 0 to 0.5W)
+            // This aligns right edge with footprint right edge (0.5W in building coords)
+            double mainWidth = footprintWidth * 0.5;
+            double mainX = mainWidth / 2; // Center at 0.25W, edges at 0 and 0.5W
+
+            layout.Sections.Add(new LayoutSection
             {
-                bool isWide = floor % 2 == 1; // odd floors are wide
-                double sectionWidth = isWide ? footprintWidth : footprintWidth * 0.6;
-                double sectionX = isWide ? 0 : footprintWidth * 0.2;
-                double baseY = (floor - 1) * ceilingHeight;
+                Width = mainWidth,
+                Height = mainHeight,
+                Depth = footprintDepth,
+                X = mainX,
+                Y = mainHeight / 2,
+                Z = 0,
+                Floor = 1,
+                AddWindows = true
+            });
 
-                layout.Sections.Add(new LayoutSection
-                {
-                    Width = sectionWidth,
-                    Height = ceilingHeight,
-                    Depth = depth,
-                    X = sectionX,
-                    Y = baseY + ceilingHeight / 2,
-                    Z = 0,
-                    Floor = floor,
-                    AddWindows = true
-                });
+            // Side wing: 50% width on left side (X from -0.5W to 0)
+            // This aligns left edge with footprint left edge (-0.5W in building coords)
+            double wingWidth = footprintWidth * 0.5;
+            double wingX = -wingWidth / 2; // Center at -0.25W, edges at -0.5W and 0
 
-                layout.RoofSections.Add(new RoofSection
-                {
-                    Width = sectionWidth,
-                    Depth = depth,
-                    X = sectionX,
-                    Y = baseY + ceilingHeight,
-                    Z = 0
-                });
-            }
+            layout.Sections.Add(new LayoutSection
+            {
+                Width = wingWidth,
+                Height = wingHeight,
+                Depth = footprintDepth,
+                X = wingX,
+                Y = wingHeight / 2,
+                Z = 0,
+                Floor = 1,
+                AddWindows = true
+            });
+
+            // Roof on main section
+            layout.RoofSections.Add(new RoofSection
+            {
+                Width = mainWidth,
+                Depth = footprintDepth,
+                X = mainX,
+                Y = mainHeight,
+                Z = 0
+            });
+
+            // Roof on side wing
+            layout.RoofSections.Add(new RoofSection
+            {
+                Width = wingWidth,
+                Depth = footprintDepth,
+                X = wingX,
+                Y = wingHeight,
+                Z = 0
+            });
 
             return layout;
         }

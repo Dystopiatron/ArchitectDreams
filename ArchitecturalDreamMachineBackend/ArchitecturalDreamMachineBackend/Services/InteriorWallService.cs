@@ -388,6 +388,16 @@ public class InteriorWallService : IInteriorWallService
         double lShapeMainWingMaxZ = footprintDepth * 0.1;
         double lShapeSideWingMinX = 0.0;
 
+        // Angled layout boundary constants (mirrors AngledLayoutStrategy)
+        // Main tower: 70% footprint centered at (0, 0)
+        // Wing: 50% footprint centered at (+0.4*W, +0.4*D)
+        double angledTowerHalfW = footprintWidth * 0.35;
+        double angledTowerHalfD = footprintDepth * 0.35;
+        double angledWingMinX = footprintWidth * 0.15;   // 0.4 - 0.25
+        double angledWingMaxX = footprintWidth * 0.65;   // 0.4 + 0.25
+        double angledWingMinZ = footprintDepth * 0.15;   // 0.4 - 0.25
+        double angledWingMaxZ = footprintDepth * 0.65;   // 0.4 + 0.25
+
         for (int i = 0; i < rooms.Count; i++)
         {
             for (int j = i + 1; j < rooms.Count; j++)
@@ -424,6 +434,39 @@ public class InteriorWallService : IInteriorWallService
                             sharedEdge.EndZ = Math.Min(sharedEdge.EndZ, lShapeMainWingMaxZ);
                             sharedEdge.Length = sharedEdge.EndZ - sharedEdge.StartZ;
                         }
+
+                        // Angled: determine which section(s) cover this wall's X position
+                        if (buildingShape == "angled")
+                        {
+                            bool inTower = sharedEdge.X >= -angledTowerHalfW && sharedEdge.X <= angledTowerHalfW;
+                            bool inWing  = sharedEdge.X >= angledWingMinX && sharedEdge.X <= angledWingMaxX;
+
+                            if (inTower && !inWing)
+                            {
+                                // Only in tower: clip Z to tower bounds
+                                sharedEdge.StartZ = Math.Max(sharedEdge.StartZ, -angledTowerHalfD + WallEndInset);
+                                sharedEdge.EndZ   = Math.Min(sharedEdge.EndZ,    angledTowerHalfD - WallEndInset);
+                            }
+                            else if (inWing && !inTower)
+                            {
+                                // Only in wing: clip Z to wing bounds
+                                sharedEdge.StartZ = Math.Max(sharedEdge.StartZ, angledWingMinZ + WallEndInset);
+                                sharedEdge.EndZ   = Math.Min(sharedEdge.EndZ,   angledWingMaxZ - WallEndInset);
+                            }
+                            else if (inTower && inWing)
+                            {
+                                // In overlap region: use tower bounds (wider Z coverage)
+                                sharedEdge.StartZ = Math.Max(sharedEdge.StartZ, -angledTowerHalfD + WallEndInset);
+                                sharedEdge.EndZ   = Math.Min(sharedEdge.EndZ,    angledTowerHalfD - WallEndInset);
+                            }
+                            else
+                            {
+                                // Not in either section: invalid wall, set length to 0 to filter out
+                                sharedEdge.Length = 0;
+                            }
+                            if (sharedEdge.Length > 0)
+                                sharedEdge.Length = sharedEdge.EndZ - sharedEdge.StartZ;
+                        }
                     }
                     else
                     {
@@ -436,6 +479,39 @@ public class InteriorWallService : IInteriorWallService
                         {
                             sharedEdge.StartX = Math.Max(sharedEdge.StartX, lShapeSideWingMinX);
                             sharedEdge.Length = sharedEdge.EndX - sharedEdge.StartX;
+                        }
+
+                        // Angled: determine which section(s) cover this wall's Z position
+                        if (buildingShape == "angled")
+                        {
+                            bool inTower = sharedEdge.Z >= -angledTowerHalfD && sharedEdge.Z <= angledTowerHalfD;
+                            bool inWing  = sharedEdge.Z >= angledWingMinZ && sharedEdge.Z <= angledWingMaxZ;
+
+                            if (inTower && !inWing)
+                            {
+                                // Only in tower: clip X to tower bounds
+                                sharedEdge.StartX = Math.Max(sharedEdge.StartX, -angledTowerHalfW + WallEndInset);
+                                sharedEdge.EndX   = Math.Min(sharedEdge.EndX,    angledTowerHalfW - WallEndInset);
+                            }
+                            else if (inWing && !inTower)
+                            {
+                                // Only in wing: clip X to wing bounds
+                                sharedEdge.StartX = Math.Max(sharedEdge.StartX, angledWingMinX + WallEndInset);
+                                sharedEdge.EndX   = Math.Min(sharedEdge.EndX,   angledWingMaxX - WallEndInset);
+                            }
+                            else if (inTower && inWing)
+                            {
+                                // In overlap region: use tower bounds (wider X coverage)
+                                sharedEdge.StartX = Math.Max(sharedEdge.StartX, -angledTowerHalfW + WallEndInset);
+                                sharedEdge.EndX   = Math.Min(sharedEdge.EndX,    angledTowerHalfW - WallEndInset);
+                            }
+                            else
+                            {
+                                // Not in either section: invalid wall, set length to 0 to filter out
+                                sharedEdge.Length = 0;
+                            }
+                            if (sharedEdge.Length > 0)
+                                sharedEdge.Length = sharedEdge.EndX - sharedEdge.StartX;
                         }
                     }
 
