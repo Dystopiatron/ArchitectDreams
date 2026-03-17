@@ -57,6 +57,14 @@ Completed work and planned enhancements.
 - `RoofGeometry.Parapets` collection — parapets render in GLB and frontend
 - `StyleResolverService` consolidates style matching (was duplicated 4×)
 
+### Layout & Geometry Fixes (2026-03-17)
+- **Angled layout windows:** Wing sections now get synthetic room generation for windows on exterior faces
+- **Split-level room layout:** Floor 2 rooms only in main section (right 50%), prevents interior walls appearing outside building
+- **Parapet rotation:** Left/right parapets rotated correctly, positioned on roof surface
+- **Fence-style railings:** Parapets replaced with posts + horizontal rails (dark metal)
+- **Interior wall clipping:** Angled layout boundary constants added for proper edge clipping
+- **3D bounds filtering:** `IsWithinAnySectionXYZ()` checks all 3 axes within SAME section
+
 ---
 
 ## Pending

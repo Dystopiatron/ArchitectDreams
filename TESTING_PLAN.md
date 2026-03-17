@@ -14,10 +14,10 @@
 | # | Type | Lot Size | Sections | Roofs |
 |---|------|----------|----------|-------|
 | 0 | Cube | 2500 | 1 | 1 |
-| 1 | Two-Story | 2501 | 2 (ground + upper 85%) | 1 (on upper) |
-| 2 | L-Shape | 2502 | 2 (main + side wing) | 2 |
-| 3 | Split-Level | 2503 | 1 per story (odd floors full width, even floors 60% offset) | 1 per story |
-| 4 | Angled | 2504 | 2-3 (rotated 22.5 / -30 deg) | 2-3 |
+| 1 | Two-Story | 2501 | 1 (multi-floor) | 1 (on top) |
+| 2 | L-Shape | 2502 | 2 (main + corner wing) | 2 |
+| 3 | Split-Level | 2503 | 2 (main 2-story right + wing 1-story left) | 2 |
+| 4 | Angled | 2504 | 2 (tower center + wing offset front-right) | 2 |
 
 ### Stories: 1, 2, 3 (use `storiesOverride`)
 
@@ -70,6 +70,12 @@ For each test, verify:
 **~~Floating windows on multi-section layouts~~** — ✅ Fixed by `WallFaceService.ComputeOverlapHoles()` and window filtering.
 
 **~~Wall panels sticking through sections~~** — ✅ Fixed by overlap hole computation in `WallFaceService`.
+
+**~~Parapet rotation/positioning~~** — ✅ Fixed: Left/right parapets rotated, placed on roof surface, fence-style.
+
+**~~Split-level interior walls outside building~~** — ✅ Fixed: `GenerateSplitLevelRoomLayout()` constrains floor 2 to main section.
+
+**~~Angled wing missing windows~~** — ✅ Fixed: Synthetic wing room + section-aware window generation.
 
 **Roof at ground level** — Check roof Y calculation: should be `section.Y + section.Height + (roofThickness / 2)`. Files: `FlatRoofStrategy.cs`, `GabledRoofStrategy.cs`.
 
