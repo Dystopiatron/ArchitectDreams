@@ -78,9 +78,9 @@ public static class ArchitecturalConstants
     public const int MinWindowsPerRoom = 1;
     
     /// <summary>
-    /// Maximum windows per room
+    /// Maximum windows per room (raised to allow style differentiation)
     /// </summary>
-    public const int MaxWindowsPerRoom = 5;
+    public const int MaxWindowsPerRoom = 12;
     
     // ===================
     // Height Constants

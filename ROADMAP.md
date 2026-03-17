@@ -1,293 +1,145 @@
-# Architectural Dream Machine — Roadmap
+# Roadmap
 
-This document tracks completed work and planned enhancements. Items are organized by status and priority.
+Completed work and planned enhancements.
 
 ---
 
-## Completed Work
+## Completed
 
 ### Code Quality & Architecture
-
-| Item | Description |
-|---|---|
-| ✅ IDesignOrchestrationService | Interface added; DesignOrchestrationService updated; controller and tests use interface |
-| ✅ IGeometryService / ILayoutService / IRoofService | All core services have interfaces for testability |
-| ✅ Extract Magic Numbers | `Constants/ArchitecturalConstants.cs` with AspectRatio, PitchDivisor, WindowRatios, etc. |
-| ✅ Fix Null Handling | HouseParameters now has consistent non-empty defaults; redundant null coalescing removed |
-| ✅ Extract HouseParametersService | Parameter calculation extracted from DesignsController to `HouseParametersService` |
-| ✅ Windows & Interior Walls | `WindowService` and `InteriorWallService` replace TODO placeholders |
+- Interface extraction for all core services (IDesignOrchestrationService, IGeometryService, ILayoutService, IRoofService, etc.)
+- Magic numbers extracted to `Constants/ArchitecturalConstants.cs`
+- HouseParametersService extracted from controller
+- WindowService and InteriorWallService replace TODO placeholders
+- Consistent null handling in HouseParameters
 
 ### API & Validation
+- Typed DTOs (`GenerateResponse`, `ErrorResponse`, `DesignSummary`)
+- FluentValidation on requests
+- Input sanitization in PromptParser
+- Centralized API URL config (`config/api.js`)
+- CrossPlatformPicker for React Native compatibility
 
-| Item | Description |
-|---|---|
-| ✅ DTOs for API Responses | `Models/ApiResponses.cs`: `GenerateResponse`, `ErrorResponse`, `DesignSummary` |
-| ✅ FluentValidation | `Validators/GenerateRequestValidator.cs`; removed manual if-chain from controller |
-| ✅ Input Sanitization | `PromptParser.Sanitize()` strips dangerous chars; `[MaxLength]` on request DTOs |
-| ✅ Environment Config for API URL | `config/api.js` centralises backend URL; `.env.example` documents `REACT_NATIVE_API_URL` |
-| ✅ Cross-Platform Picker | `CrossPlatformPicker.js` replaces native `<select>` for React Native compatibility |
+### Security (Phase 1 & 2)
+- CORS scoped to configured origins (AllowAnyOrigin only in Development)
+- HSTS in non-development environments
+- Rate limiting on POST endpoints
+- API key authentication (`X-API-Key` header)
+- Pinned NuGet + npm dependencies
+- Geometry input bounds validation
 
-### Security Hardening (Phase 1 & 2)
+### Exports
+- OBJ mesh export
+- IFC4 via xBIM: full IfcProject hierarchy, IfcWallStandardCase, IfcWindow with openings, IfcDoor, IfcSlab, IfcRoof
+- GLB via SharpGLTF: PBR materials, transparent glass, style-specific colors
 
-| Item | Description |
-|---|---|
-| ✅ XSS/CORS | CORS scoped to configured origins; `AllowAnyOrigin` only in `Development` |
-| ✅ HSTS | HTTP Strict Transport Security enabled in non-development environments |
-| ✅ Rate Limiting | Applied to POST endpoints via ASP.NET Core middleware |
-| ✅ API Key Authentication | `X-API-Key` header required on all endpoints; keys in `appsettings.json` |
-| ✅ Pinned Dependencies | NuGet + npm packages pinned to verified versions |
-| ✅ Geometry Validation | Input bounds validated before geometry generation |
+### 3D Viewer
+- Interactive camera (zoom, rotate, preset views)
+- Dark theme UI
+- Auto-rotate with `autoRotateRef` (stale closure fix)
 
-### Export Features
-
-| Item | Description |
-|---|---|
-| ✅ OBJ Export | `GET /api/designs/{id}/export` — Wavefront OBJ for AutoCAD, Blender, SketchUp |
-| ✅ IFC Export | `GET /api/designs/{id}/export/ifc` — IFC4 via xBIM Toolkit; full IfcProject hierarchy |
-| ✅ GLB/glTF Export | `GET /api/designs/{id}/export/gltf` — Binary GLB via SharpGLTF Toolkit; PBR materials, transparent glass, style-specific colors |
-
-### 3D Viewer (Frontend)
-
-| Item | Description |
-|---|---|
-| ✅ Interactive Camera | Zoom, rotate, preset views (Top, Front, Side, Perspective) |
-| ✅ Dark Theme | Reduced eye strain UI |
-| ✅ Auto-Rotate Fix | `autoRotateRef` resolves stale closure in Three.js animation loop |
+### Semantic Model (Phase 3)
+- WallSegment entity with start/end coordinates, type, openings
+- BuildingModel aggregate (floors, walls, doors, windows, slabs, roof)
+- Services updated to produce semantic entities alongside GeometryData
 
 ---
 
-## Pending — Code Quality
+## Pending
 
-### 🔴 Fix Stale Closure Bug in HouseViewer3D
+### Style System Audit (2026-02-21)
 
-Already noted as fixed above (`autoRotateRef`), but verify the animated loop uses the ref consistently.
+Comprehensive review of style differentiation (Modern, Victorian, Brutalist).
 
-**Files:** `ArchitecturalDreamMachineFrontend/components/HouseViewer3D.js`
+**No breaking conflicts found** — styles don't clash during generation. However, several gaps cause styles to produce near-identical output despite different parameters.
 
-### 🟠 Add Error Handling for SQL Server Connection String
+#### Critical Issues
 
-Validate SQL Server connection before use; fall back to SQLite if invalid.
+| Issue | Location | Impact |
+|-------|----------|--------|
+| `MaxWindowsPerRoom=5` clamps all styles | `ArchitecturalConstants.cs#L67` | Modern 30%, Victorian 20%, Brutalist 10% all produce 5 windows in typical rooms |
+| `WindowToWallRatio` bypassed | `HouseParametersService.GenerateRoomLayout()` | Uses hardcoded `0.15` instead of style value |
+| Parapets generated but discarded | `FlatRoofStrategy.CreateParapetWalls()` | `RoofGeometry` has no storage — Modern/Brutalist roofs identical |
+| WindowStyle decorative only | `WindowService.cs` | `"small"/"ornate"/"large"` never affects geometry |
+| Style matching duplicated 4× | `DesignsController.cs` lines 58, 160, 220, 280 | Must apply fixes in all locations |
+| Material type mismatch | Frontend `GeometryRenderer.js` | Doesn't recognize `"stucco"`, `"wood siding"` |
 
-**Files:** `ArchitecturalDreamMachineBackend/Program.cs`
+#### Medium Issues
 
-```csharp
-var sqlServerConnection = Environment.GetEnvironmentVariable("SQL_SERVER_CONNECTION_STRING");
-if (!string.IsNullOrEmpty(sqlServerConnection))
-{
-    try { options.UseSqlServer(sqlServerConnection); }
-    catch { /* log, fall back to SQLite */ }
-}
-```
+| Issue | Location | Impact |
+|-------|----------|--------|
+| GltfExporter ignores `Material.Color` | `GltfExporter.CreateMaterials()` | Uses hardcoded style switch, not parameter |
+| IfcExporter wall props hardcoded | `IfcExporter.AddWallProperties()` | Always "Stucco" regardless of style |
+| ObjExporter exports cube only | `ObjExporter.cs` | Legacy — ignores BuildingGeometry |
+| `Design` stores keywords, not StyleTemplateId | `Design.cs` | Export re-parses; could theoretically change |
+| TwoStoryLayoutStrategy redundant | `LayoutStrategies/` | Identical output to CubeLayoutStrategy |
+
+#### Remediation Priority
+
+1. Raise or remove `MaxWindowsPerRoom` constant
+2. Pass `WindowToWallRatio` to `GenerateRoomLayout()`
+3. Add `Parapets` collection to `RoofGeometry`, return from strategy
+4. Extract style resolution to shared service (eliminate 4× duplication)
+5. Implement `WindowStyle` → dimensions mapping
+6. Normalize material types between backend/frontend
+
+#### Documentation Inconsistencies Found
+
+- WALL_FACE_FIX_PLAN.md claimed SplitLevelLayoutStrategy ignores stories > 2 — code correctly loops all floors
+- TESTING_PLAN.md dated Nov 2025 shows "0 / 15" tests completed — appears stale
+
+---
+
+### Code Quality
+
+**SQL Server connection validation** — Validate connection before use; fall back to SQLite if invalid. File: `Program.cs`.
 
 ---
 
 ## BIM Export Roadmap
 
-Current IFC exports produce valid IFC4 structure but have gaps that prevent proper import in professional BIM tools (Revit, ArchiCAD). The following phases address these gaps progressively.
-
-### Current IFC Status
+### Current IFC Entity Status
 
 | Entity | Status |
 |---|---|
-| IfcProject / IfcSite / IfcBuilding | ✅ Complete |
-| IfcBuildingStorey | ✅ Complete |
-| IfcSpace (rooms) | ✅ Complete |
-| IfcRoof (with pitch/overhang) | ✅ Complete |
-| IfcWall | ✅ `IfcWallStandardCase` with extruded profile and Axis centreline |
-| IfcWindow | ✅ `IfcOpeningElement` → `IfcRelVoidsElement` (voids wall) → `IfcRelFillsElement` (fills opening) |
-| IfcDoor | ✅ `IfcDoor` with `IfcRelVoidsElement` to host interior wall; position-matched |
-| IfcSlab (floors/ceilings) | ✅ Per-storey floor slab + inter-storey ceiling slabs |
-| IfcOpeningElement | ✅ Full Wall-Opening-Filling chain for both windows and doors |
-| Representation sub-contexts | ✅ Body, Axis, Box sub-contexts registered under Model parent |
-| Material layers | ❌ Single string, no IfcMaterialLayerSet |
-| 2D Plan representations | ❌ Only 3D Body context |
+| IfcProject / IfcSite / IfcBuilding / IfcBuildingStorey | Done |
+| IfcSpace (rooms) | Done |
+| IfcWallStandardCase (extruded profile + Axis centreline) | Done |
+| IfcWindow (with IfcOpeningElement + IfcRelVoidsElement + IfcRelFillsElement) | Done |
+| IfcDoor (proximity-matched to host wall, 2ft tolerance) | Done |
+| IfcSlab (floor + ceiling per storey) | Done |
+| IfcRoof (with pitch/overhang) | Done |
+| Body, Axis, Box representation sub-contexts | Done |
+| IfcMaterialLayerSet | Not started |
+| 2D plan representations | Not started |
+
+### Phase 2: IfcOpenShell Post-Processing
+
+Priority: Medium | Requires Python 3.x + pip
+
+- IFC to glTF conversion via IfcConvert (alternative to SharpGLTF)
+- IDS validation endpoint (`GET /api/designs/{id}/validate`)
+- Clash detection endpoint (`GET /api/designs/{id}/clash`)
+
+### Phase 4: Material and Classification
+
+Priority: Low
+
+- `IfcMaterialLayerSet` for walls (replacing single-string material)
+- Uniclass / OmniClass classification codes on exported elements
+
+### Phase 5: Frontend glTF Loading
+
+Priority: Low
+
+Load server-rendered GLB in Three.js viewer instead of generating geometry client-side.
 
 ---
 
-### Phase 1: Enhanced xBIM IFC Compliance ✅ COMPLETE
+## Validation Checklist (Run After Geometry Changes)
 
-All Phase 1 items are implemented in `Export/IfcExporter.cs`.
-
-#### ✅ 1.1 IfcOpeningElement for Windows
-
-Full Wall-Opening-Filling chain: `IfcRelVoidsElement` links each opening to its host exterior wall (looked up by `WallDirection`); `IfcRelFillsElement` links the window to the opening.
-
-#### ✅ 1.2 IfcDoor Entities
-
-`DoorElement.cs` carries explicit (X, Z) position. `CreateDoorsWithOpenings` uses `FindHostWallForDoor` with proximity matching (Manhattan distance, 2 ft tolerance) to link each door to its host interior wall via `IfcRelVoidsElement` + `IfcRelFillsElement`.
-
-#### ✅ 1.3 IfcSlab for Floors and Ceilings
-
-`CreateFloorSlabs` generates per-storey floor slabs (type `FLOOR`) and inter-storey ceiling slabs with extruded `IfcRectangleProfileDef` geometry.
-
-#### ✅ 1.4 Proper Wall Geometry with Extrusion
-
-`CreateProperWall` creates `IfcWallStandardCase` with line-based placement, extruded `IfcRectangleProfileDef` body representation, and `IfcPolyline` axis representation. Wall thickness: 0.5 ft (exterior).
-
-#### ✅ 1.5 Multiple Representation Contexts
-
-`Body`, `Axis`, and `Box` `IfcGeometricRepresentationSubContext` objects registered under the root Model context in `CreateProject`.
-
-
-### Phase 2: IfcOpenShell Post-Processing Pipeline
-
-**Priority: MEDIUM | Requires Python 3.x + pip**
-
-Adds optional Python-based enhancement and format conversion.
-
-#### 2.1 Install IfcOpenShell
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install ifcopenshell ifcpatch ifcclash ifctester
-# ifcconvert binary: download from blenderbim.org/docs-python/ifcconvert
-```
-
-#### 2.2 IFC → glTF via IfcConvert (alternative to SharpGLTF)
-
-Produce glTF from IFC for guaranteed geometry fidelity:
-```csharp
-// Export/IfcConverter.cs
-public interface IIfcConverter
-{
-    Task<byte[]> ConvertToGltfAsync(byte[] ifcData);
-}
-```
-
-#### 2.3 IDS Validation Endpoint
-
-`GET /api/designs/{id}/validate` — Validate export against an IDS specification.
-
-IDS file: `Validation/adm_requirements.ids`
-
-#### 2.4 Clash Detection Endpoint
-
-`GET /api/designs/{id}/clash` — Detect geometry overlaps between rooms and walls.
-
-**Estimated effort:** 8–12 hours
-
----
-
-### ✅ Phase 3: Enhanced Semantic Model — COMPLETE
-
-**Priority: MEDIUM | No external dependencies**
-
-Enriches the data model for full BIM semantics before export.
-
-#### 3.1 WallSegment Entity
-
-```csharp
-// Geometry/WallSegment.cs
-public class WallSegment
-{
-    public double StartX, StartZ, EndX, EndZ, Height, Thickness;
-    public WallType Type;        // Exterior, Interior, Partition
-    public bool IsLoadBearing;
-    public List<Opening> Openings;  // Windows and doors with positions
-}
-```
-
-#### 3.2 BuildingModel Aggregate
-
-Replaces loose `BuildingGeometry` with a full semantic aggregate:
-
-```csharp
-// Models/BuildingModel.cs
-public class BuildingModel
-{
-    public List<Floor> Floors;
-    public List<WallSegment> Walls;
-    public List<DoorElement> Doors;
-    public List<WindowElement> Windows;
-    public List<Slab> Slabs;
-    public RoofAssembly Roof;
-    public double GrossFloorArea;
-}
-```
-
-#### 3.3 Update Services
-
-| Service | Enhancement |
-|---|---|
-| `LayoutService` | Produce `WallSegment` entities with start/end coordinates |
-| `WindowService` | Link `WindowElement` to parent wall |
-| `InteriorWallService` | Track `DoorElement` positions explicitly |
-| `DesignOrchestrationService` | Build complete `BuildingModel` aggregate |
-
-**Estimated effort:** 8–12 hours
-
----
-
-### Phase 4: Material and Classification Support
-
-**Priority: LOW**
-
-Adds professional material layer definitions and building classification codes.
-
-#### 4.1 Material Layer Sets
-
-`IfcMaterialLayerSet` for walls (gypsum + stud + gypsum, exterior sheathing, etc.) replacing the current single-string material field.
-
-**New file:** `Geometry/MaterialLayer.cs`
-
-#### 4.2 Uniclass / OmniClass Classification
-
-Attach standard classification codes to exported IFC elements.
-
-**New file:** `Classification/BuildingClassification.cs`
-
-**Estimated effort:** 4–8 hours
-
----
-
-### Phase 5: Frontend glTF Loading (Optional)
-
-**Priority: LOW**
-
-Allow the Three.js viewer to load server-rendered GLB instead of generating geometry client-side.
-
-```javascript
-// HouseViewer3D.js
-if (houseParams.gltfUrl) {
-  await loadGltfFromUrl(houseGroup, houseParams.gltfUrl);
-} else {
-  GeometryRenderer.renderBuilding(houseGroup, houseParams.geometry);
-}
-```
-
-**Estimated effort:** 4–8 hours
-
----
-
-## IFC Validation Checklist (Phase 1 Success Criteria)
-
-- [ ] Windows appear as proper openings in walls when imported to Revit
-- [ ] Doors are `IfcDoor` entities, not just wall gaps
-- [ ] Floors are `IfcSlab` entities
-- [ ] Walls have proper thickness and line-based extrusion geometry
-- [ ] IFC passes basic IDS validation (`ifctester`)
-- [ ] All existing unit tests continue to pass after changes
-
----
-
-## Revit Interoperability Note
-
-IFC is the bridge to Revit — `.rvt` format is proprietary but Revit imports IFC natively (File → Open → IFC). Use IFC4 for best Revit support. Phases 1–3 above are sufficient for a Revit-compatible export.
-
----
-
-## Testing Checklist (Run After Any Geometry Change)
-
-- [ ] All unit tests pass: `dotnet test`
+- [ ] `dotnet test` passes
 - [ ] Generate a design with each style (Modern, Victorian, Brutalist)
-- [ ] Export OBJ → verify opens in Blender
-- [ ] Export IFC → verify opens in BIM Vision / xBIM Xplorer
-- [ ] Export GLB → verify opens in https://gltf-viewer.donmccurdy.com/
-- [ ] 3D viewer camera controls work (rotate, zoom, presets)
-- [ ] No console errors in browser DevTools
-- [ ] No errors in backend logs
-
----
-
-*Last updated: February 2026*
+- [ ] Export OBJ, IFC, GLB and verify they open in target software
+- [ ] 3D viewer camera controls work
+- [ ] No console errors in browser or backend logs

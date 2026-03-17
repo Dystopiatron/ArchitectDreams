@@ -38,6 +38,15 @@ public class GltfExporter : IGltfExporter
             var mesh = ConvertGeometryData(roof.Geometry, $"Roof_{i}", materials);
             if (mesh != null)
                 AddMeshToScene(scene, mesh, roof.Geometry.Position, roof.Geometry.Rotation);
+            
+            // Export parapet walls for flat roofs (Modern/Brutalist styles)
+            for (int p = 0; p < roof.Parapets.Count; p++)
+            {
+                var parapet = roof.Parapets[p];
+                var parapetMesh = ConvertGeometryData(parapet, $"Parapet_{i}_{p}", materials);
+                if (parapetMesh != null)
+                    AddMeshToScene(scene, parapetMesh, parapet.Position, parapet.Rotation);
+            }
         }
 
         for (int i = 0; i < geometry.Windows.Count; i++)

@@ -13,17 +13,45 @@ public class WindowService : IWindowService
     private readonly IGeometryService _geometryService;
     private readonly ILogger<WindowService> _logger;
 
-    // Window sizing constants
-    private const double StandardWindowWidth = 3.0;   // 3 feet wide
-    private const double StandardWindowHeight = 4.0;  // 4 feet tall
+    // Default window sizing constants (used for "standard" style)
+    private const double DefaultWindowWidth = 3.0;   // 3 feet wide
+    private const double DefaultWindowHeight = 4.0;  // 4 feet tall
     private const double WindowSillHeight = 3.0;      // 3 feet from floor to sill
     private const double MinWindowSpacing = 2.0;      // Minimum 2 feet between windows
     private const double WallEdgeMargin = 1.5;        // Margin from wall corners
+    
+    // Current window dimensions (set per public method call based on windowStyle)
+    private double _windowWidth = DefaultWindowWidth;
+    private double _windowHeight = DefaultWindowHeight;
 
     public WindowService(IGeometryService geometryService, ILogger<WindowService> logger)
     {
         _geometryService = geometryService;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Get window dimensions based on style
+    /// </summary>
+    private (double Width, double Height) GetWindowDimensions(string windowStyle)
+    {
+        return windowStyle?.ToLower() switch
+        {
+            "small" => (2.0, 3.0),    // Brutalist: small punched openings
+            "large" => (5.0, 6.0),    // Modern: floor-to-ceiling style
+            "ornate" => (3.0, 5.0),   // Victorian: tall double-hung
+            _ => (DefaultWindowWidth, DefaultWindowHeight)
+        };
+    }
+    
+    /// <summary>
+    /// Set current window dimensions based on style (call at start of each public method)
+    /// </summary>
+    private void ConfigureWindowDimensions(string windowStyle)
+    {
+        var (w, h) = GetWindowDimensions(windowStyle);
+        _windowWidth = w;
+        _windowHeight = h;
     }
 
     /// <inheritdoc/>
@@ -33,13 +61,15 @@ public class WindowService : IWindowService
         double ceilingHeight,
         double footprintWidth,
         double footprintDepth,
-        string buildingShape = "rectangular")
+        string buildingShape = "rectangular",
+        string windowStyle = "standard")
     {
         var windows = new List<GeometryData>();
+        ConfigureWindowDimensions(windowStyle);
 
         _logger.LogInformation(
-            "Generating windows for {RoomCount} rooms with {Ratio:P0} window-to-wall ratio",
-            rooms.Count, windowToWallRatio);
+            "Generating windows for {RoomCount} rooms with {Ratio:P0} ratio, style={Style} ({Width}x{Height}ft)",
+            rooms.Count, windowToWallRatio, windowStyle, _windowWidth, _windowHeight);
 
         // Group rooms by floor for proper Y positioning
         var roomsByFloor = rooms.GroupBy(r => r.Floor).OrderBy(g => g.Key);
@@ -48,7 +78,7 @@ public class WindowService : IWindowService
         {
             int floor = floorGroup.Key;
             double floorBaseY = (floor - 1) * ceilingHeight;
-            double windowCenterY = floorBaseY + WindowSillHeight + (StandardWindowHeight / 2);
+            double windowCenterY = floorBaseY + WindowSillHeight + (_windowHeight / 2);
 
             foreach (var room in floorGroup)
             {
@@ -75,14 +105,16 @@ public class WindowService : IWindowService
         double ceilingHeight,
         double footprintWidth,
         double footprintDepth,
-        string buildingShape = "rectangular")
+        string buildingShape = "rectangular",
+        string windowStyle = "standard")
     {
         var windowElements = new List<WindowElement>();
         int windowIndex = 1;
+        ConfigureWindowDimensions(windowStyle);
 
         _logger.LogInformation(
-            "Generating window elements for {RoomCount} rooms with wall relationships",
-            rooms.Count);
+            "Generating window elements for {RoomCount} rooms with wall relationships, style={Style}",
+            rooms.Count, windowStyle);
 
         // Group rooms by floor for proper Y positioning
         var roomsByFloor = rooms.GroupBy(r => r.Floor).OrderBy(g => g.Key);
@@ -91,7 +123,7 @@ public class WindowService : IWindowService
         {
             int floor = floorGroup.Key;
             double floorBaseY = (floor - 1) * ceilingHeight;
-            double windowCenterY = floorBaseY + WindowSillHeight + (StandardWindowHeight / 2);
+            double windowCenterY = floorBaseY + WindowSillHeight + (_windowHeight / 2);
 
             foreach (var room in floorGroup)
             {
@@ -121,11 +153,12 @@ public class WindowService : IWindowService
         double footprintWidth,
         double footprintDepth,
         List<WallSegment> exteriorWalls,
-        string buildingShape = "rectangular")
+        string buildingShape = "rectangular",
+        string windowStyle = "standard")
     {
         // Generate window elements using the existing logic
         var elements = GenerateWindowElements(
-            rooms, windowToWallRatio, ceilingHeight, footprintWidth, footprintDepth, buildingShape);
+            rooms, windowToWallRatio, ceilingHeight, footprintWidth, footprintDepth, buildingShape, windowStyle);
 
         // Link each window to the nearest matching exterior wall segment
         foreach (var window in elements)
@@ -262,25 +295,25 @@ public class WindowService : IWindowService
         
         // Check if wall is long enough for windows
         double availableLength = wall.Length - (2 * WallEdgeMargin);
-        if (availableLength < StandardWindowWidth) return elements;
+        if (availableLength < _windowWidth) return elements;
 
         // Calculate maximum windows that can fit
-        double requiredLengthPerWindow = StandardWindowWidth + MinWindowSpacing;
+        double requiredLengthPerWindow = _windowWidth + MinWindowSpacing;
         int maxWindows = (int)((availableLength + MinWindowSpacing) / requiredLengthPerWindow);
         windowCount = Math.Min(windowCount, maxWindows);
 
         if (windowCount == 0) return elements;
 
         // Calculate spacing between windows
-        double totalWindowWidth = windowCount * StandardWindowWidth;
+        double totalWindowWidth = windowCount * _windowWidth;
         double totalSpacing = availableLength - totalWindowWidth;
         double spacing = totalSpacing / (windowCount + 1);
 
         // Generate each window element
         for (int i = 0; i < windowCount; i++)
         {
-            double offset = WallEdgeMargin + spacing + (StandardWindowWidth / 2) + 
-                           (i * (StandardWindowWidth + spacing));
+            double offset = WallEdgeMargin + spacing + (_windowWidth / 2) + 
+                           (i * (_windowWidth + spacing));
             
             double windowX, windowZ;
             double rotation = 0;
@@ -310,8 +343,8 @@ public class WindowService : IWindowService
                 Name = $"Window {windowIndex++}",
                 RoomName = room.Name,
                 Floor = room.Floor,
-                Width = StandardWindowWidth,
-                Height = StandardWindowHeight,
+                Width = _windowWidth,
+                Height = _windowHeight,
                 SillHeight = WindowSillHeight,
                 X = windowX,
                 Y = windowCenterY,
@@ -539,25 +572,25 @@ public class WindowService : IWindowService
         
         // Check if wall is long enough for windows
         double availableLength = wall.Length - (2 * WallEdgeMargin);
-        if (availableLength < StandardWindowWidth) return windows;
+        if (availableLength < _windowWidth) return windows;
 
         // Calculate maximum windows that can fit
-        double requiredLengthPerWindow = StandardWindowWidth + MinWindowSpacing;
+        double requiredLengthPerWindow = _windowWidth + MinWindowSpacing;
         int maxWindows = (int)((availableLength + MinWindowSpacing) / requiredLengthPerWindow);
         windowCount = Math.Min(windowCount, maxWindows);
 
         if (windowCount == 0) return windows;
 
         // Calculate spacing between windows
-        double totalWindowWidth = windowCount * StandardWindowWidth;
+        double totalWindowWidth = windowCount * _windowWidth;
         double totalSpacing = availableLength - totalWindowWidth;
         double spacing = totalSpacing / (windowCount + 1);
 
         // Generate each window
         for (int i = 0; i < windowCount; i++)
         {
-            double offset = WallEdgeMargin + spacing + (StandardWindowWidth / 2) + 
-                           (i * (StandardWindowWidth + spacing));
+            double offset = WallEdgeMargin + spacing + (_windowWidth / 2) + 
+                           (i * (_windowWidth + spacing));
             
             double windowX, windowZ;
             double rotation = 0;
@@ -584,8 +617,8 @@ public class WindowService : IWindowService
             }
 
             var windowGeom = _geometryService.CreateQuad(
-                StandardWindowWidth,
-                StandardWindowHeight,
+                _windowWidth,
+                _windowHeight,
                 windowX,
                 windowCenterY,
                 windowZ,

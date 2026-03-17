@@ -9,8 +9,9 @@ public interface IWallFaceService
     /// Generate perforated wall face panels for all exterior faces of every
     /// building section.  Each panel carries the 2D opening data (windows and
     /// exterior doors) needed by the Three.js ShapeGeometry renderer.
+    /// Returns face panels plus the set of window IDs placed on visible faces.
     /// </summary>
-    List<WallFaceData> GenerateWallFaces(
+    WallFaceResult GenerateWallFaces(
         List<LayoutSection> sections,
         List<WindowElement>  windows,
         List<DoorElement>    doors,

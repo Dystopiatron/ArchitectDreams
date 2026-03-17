@@ -67,12 +67,18 @@ public class DesignsControllerTests
         var logger = new Mock<ILogger<DesignsController>>();
         var mockOrchestration = new Mock<IDesignOrchestrationService>();
         var mockHouseParams = new Mock<IHouseParametersService>();
+        var mockStyleResolver = new Mock<IStyleResolverService>();
         var mockIfcExporter = new Mock<IIfcExporter>();
+        var mockGltfExporter = new Mock<IGltfExporter>();
+        
+        mockStyleResolver
+            .Setup(x => x.ResolveFromKeywordsAsync(It.IsAny<IEnumerable<string>>()))
+            .ReturnsAsync(context.StyleTemplates.First(st => st.Name == "Modern"));
         mockHouseParams
             .Setup(x => x.CalculateParameters(It.IsAny<double>(), It.IsAny<StyleTemplate>(), It.IsAny<string?>(), It.IsAny<int?>()))
             .Returns(new HouseParameters { LotSize = 2500 });
-        var mockGltfExporter = new Mock<IGltfExporter>();
-        var controller = new DesignsController(context, logger.Object, mockOrchestration.Object, mockHouseParams.Object, mockIfcExporter.Object, mockGltfExporter.Object);
+        
+        var controller = new DesignsController(context, logger.Object, mockOrchestration.Object, mockHouseParams.Object, mockStyleResolver.Object, mockIfcExporter.Object, mockGltfExporter.Object);
 
         var request = new GenerateRequest
         {
@@ -101,9 +107,10 @@ public class DesignsControllerTests
         var logger = new Mock<ILogger<DesignsController>>();
         var mockOrchestration = new Mock<IDesignOrchestrationService>();
         var mockHouseParams = new Mock<IHouseParametersService>();
+        var mockStyleResolver = new Mock<IStyleResolverService>();
         var mockIfcExporter = new Mock<IIfcExporter>();
         var mockGltfExporter = new Mock<IGltfExporter>();
-        var controller = new DesignsController(context, logger.Object, mockOrchestration.Object, mockHouseParams.Object, mockIfcExporter.Object, mockGltfExporter.Object);
+        var controller = new DesignsController(context, logger.Object, mockOrchestration.Object, mockHouseParams.Object, mockStyleResolver.Object, mockIfcExporter.Object, mockGltfExporter.Object);
 
         var request = new GenerateRequest
         {
@@ -126,9 +133,10 @@ public class DesignsControllerTests
         var logger = new Mock<ILogger<DesignsController>>();
         var mockOrchestration = new Mock<IDesignOrchestrationService>();
         var mockHouseParams = new Mock<IHouseParametersService>();
+        var mockStyleResolver = new Mock<IStyleResolverService>();
         var mockIfcExporter = new Mock<IIfcExporter>();
         var mockGltfExporter = new Mock<IGltfExporter>();
-        var controller = new DesignsController(context, logger.Object, mockOrchestration.Object, mockHouseParams.Object, mockIfcExporter.Object, mockGltfExporter.Object);
+        var controller = new DesignsController(context, logger.Object, mockOrchestration.Object, mockHouseParams.Object, mockStyleResolver.Object, mockIfcExporter.Object, mockGltfExporter.Object);
 
         var request = new GenerateRequest
         {
@@ -151,9 +159,10 @@ public class DesignsControllerTests
         var logger = new Mock<ILogger<DesignsController>>();
         var mockOrchestration = new Mock<IDesignOrchestrationService>();
         var mockHouseParams = new Mock<IHouseParametersService>();
+        var mockStyleResolver = new Mock<IStyleResolverService>();
         var mockIfcExporter = new Mock<IIfcExporter>();
         var mockGltfExporter = new Mock<IGltfExporter>();
-        var controller = new DesignsController(context, logger.Object, mockOrchestration.Object, mockHouseParams.Object, mockIfcExporter.Object, mockGltfExporter.Object);
+        var controller = new DesignsController(context, logger.Object, mockOrchestration.Object, mockHouseParams.Object, mockStyleResolver.Object, mockIfcExporter.Object, mockGltfExporter.Object);
 
         // Add test designs
         context.Designs.AddRange(

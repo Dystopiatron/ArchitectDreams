@@ -20,6 +20,7 @@ public class DesignsController : ControllerBase
     private readonly ILogger<DesignsController> _logger;
     private readonly IDesignOrchestrationService _orchestrationService;
     private readonly IHouseParametersService _houseParametersService;
+    private readonly IStyleResolverService _styleResolver;
     private readonly IIfcExporter _ifcExporter;
     private readonly IGltfExporter _gltfExporter;
 
@@ -28,6 +29,7 @@ public class DesignsController : ControllerBase
         ILogger<DesignsController> logger,
         IDesignOrchestrationService orchestrationService,
         IHouseParametersService houseParametersService,
+        IStyleResolverService styleResolver,
         IIfcExporter ifcExporter,
         IGltfExporter gltfExporter)
     {
@@ -35,6 +37,7 @@ public class DesignsController : ControllerBase
         _logger = logger;
         _orchestrationService = orchestrationService;
         _houseParametersService = houseParametersService;
+        _styleResolver = styleResolver;
         _ifcExporter = ifcExporter;
         _gltfExporter = gltfExporter;
     }
@@ -53,25 +56,15 @@ public class DesignsController : ControllerBase
             var keywords = PromptParser.Parse(request.StylePrompt);
             _logger.LogInformation("Parsed keywords: {Keywords}", string.Join(", ", keywords));
 
-            // Query StyleTemplate based on keywords (simple matching)
-            StyleTemplate? styleTemplate = null;
+            // Extract stories and building shape from keywords if not explicitly overridden
+            var storiesOverride = request.StoriesOverride ?? PromptParser.ExtractStories(keywords);
+            var buildingShapeOverride = request.BuildingShapeOverride ?? PromptParser.ExtractBuildingShape(keywords);
             
-            foreach (var keyword in keywords)
-            {
-                styleTemplate = await _context.StyleTemplates
-                    .FirstOrDefaultAsync(st => st.Name.ToLower().Contains(keyword));
-                
-                if (styleTemplate != null)
-                    break;
-            }
+            _logger.LogInformation("Extracted overrides - Stories: {Stories}, Shape: {Shape}", 
+                storiesOverride, buildingShapeOverride);
 
-            // Fallback to Modern if no match
-            if (styleTemplate == null)
-            {
-                styleTemplate = await _context.StyleTemplates
-                    .FirstOrDefaultAsync(st => st.Name == "Modern");
-            }
-
+            // Resolve StyleTemplate using service
+            var styleTemplate = await _styleResolver.ResolveFromKeywordsAsync(keywords);
             if (styleTemplate == null)
             {
                 return StatusCode(500, new ErrorResponse("No style templates available"));
@@ -81,8 +74,8 @@ public class DesignsController : ControllerBase
             var houseParameters = _houseParametersService.CalculateParameters(
                 request.LotSize,
                 styleTemplate,
-                request.BuildingShapeOverride,
-                request.StoriesOverride);
+                buildingShapeOverride,
+                storiesOverride);
 
             // Save Design to database
             var design = new Design
@@ -155,26 +148,8 @@ public class DesignsController : ControllerBase
                 return NotFound(new ErrorResponse("Design not found"));
             }
 
-            // Parse keywords and find style template
-            var keywords = design.StyleKeywords.Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries);
-            StyleTemplate? styleTemplate = null;
-            
-            foreach (var keyword in keywords)
-            {
-                styleTemplate = await _context.StyleTemplates
-                    .FirstOrDefaultAsync(st => st.Name.ToLower().Contains(keyword.ToLower()));
-                
-                if (styleTemplate != null)
-                    break;
-            }
-
-            // Fallback to Modern if no match
-            if (styleTemplate == null)
-            {
-                styleTemplate = await _context.StyleTemplates
-                    .FirstOrDefaultAsync(st => st.Name == "Modern");
-            }
-
+            // Resolve StyleTemplate using service
+            var styleTemplate = await _styleResolver.ResolveFromStoredKeywordsAsync(design.StyleKeywords);
             if (styleTemplate == null)
             {
                 return StatusCode(500, new ErrorResponse("No style templates available"));
@@ -215,26 +190,8 @@ public class DesignsController : ControllerBase
                 return NotFound(new ErrorResponse("Design not found"));
             }
 
-            // Parse keywords and find style template
-            var keywords = design.StyleKeywords.Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries);
-            StyleTemplate? styleTemplate = null;
-            
-            foreach (var keyword in keywords)
-            {
-                styleTemplate = await _context.StyleTemplates
-                    .FirstOrDefaultAsync(st => st.Name.ToLower().Contains(keyword.ToLower()));
-                
-                if (styleTemplate != null)
-                    break;
-            }
-
-            // Fallback to Modern if no match
-            if (styleTemplate == null)
-            {
-                styleTemplate = await _context.StyleTemplates
-                    .FirstOrDefaultAsync(st => st.Name == "Modern");
-            }
-
+            // Resolve StyleTemplate using service
+            var styleTemplate = await _styleResolver.ResolveFromStoredKeywordsAsync(design.StyleKeywords);
             if (styleTemplate == null)
             {
                 return StatusCode(500, new ErrorResponse("No style templates available"));
@@ -276,24 +233,8 @@ public class DesignsController : ControllerBase
                 return NotFound(new ErrorResponse("Design not found"));
             }
 
-            var keywords = design.StyleKeywords.Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries);
-            StyleTemplate? styleTemplate = null;
-
-            foreach (var keyword in keywords)
-            {
-                styleTemplate = await _context.StyleTemplates
-                    .FirstOrDefaultAsync(st => st.Name.ToLower().Contains(keyword.ToLower()));
-
-                if (styleTemplate != null)
-                    break;
-            }
-
-            if (styleTemplate == null)
-            {
-                styleTemplate = await _context.StyleTemplates
-                    .FirstOrDefaultAsync(st => st.Name == "Modern");
-            }
-
+            // Resolve StyleTemplate using service
+            var styleTemplate = await _styleResolver.ResolveFromStoredKeywordsAsync(design.StyleKeywords);
             if (styleTemplate == null)
             {
                 return StatusCode(500, new ErrorResponse("No style templates available"));

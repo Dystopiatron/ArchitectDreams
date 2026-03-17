@@ -1279,6 +1279,11 @@ public class IfcExporter : IIfcExporter
                     p.Name = "EavesOverhang";
                     p.NominalValue = new IfcLengthMeasure(parameters.EavesOverhang);
                 }));
+                ps.HasProperties.Add(model.Instances.New<IfcPropertySingleValue>(p =>
+                {
+                    p.Name = "HasParapet";
+                    p.NominalValue = new IfcBoolean(parameters.HasParapet);
+                }));
             });
             
             model.Instances.New<IfcRelDefinesByProperties>(r =>

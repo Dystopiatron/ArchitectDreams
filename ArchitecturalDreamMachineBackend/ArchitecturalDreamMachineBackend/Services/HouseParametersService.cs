@@ -61,13 +61,14 @@ public class HouseParametersService : IHouseParametersService
         // Determine building shape
         var buildingShape = buildingShapeOverride ?? styleTemplate.BuildingShape;
 
-        // Generate room layout
+        // Generate room layout (pass style's window ratio for proper differentiation)
         var rooms = GenerateRoomLayout(
             footprintWidth,
             footprintDepth,
             styleTemplate.RoomCount,
             stories,
-            buildingShape
+            buildingShape,
+            styleTemplate.WindowToWallRatio
         );
 
         // Create HouseParameters
@@ -108,12 +109,14 @@ public class HouseParametersService : IHouseParametersService
     /// <summary>
     /// Generate room layout based on building dimensions and room count
     /// </summary>
+    /// <param name="windowToWallRatio">Style-specific window-to-wall ratio (e.g., 0.10 brutalist, 0.30 modern)</param>
     private List<Room> GenerateRoomLayout(
         double width,
         double depth,
         int roomCount,
         int stories,
-        string shape)
+        string shape,
+        double windowToWallRatio)
     {
         var rooms = new List<Room>();
 
@@ -133,7 +136,7 @@ public class HouseParametersService : IHouseParametersService
                 Z = 0,
                 Width = width,
                 Depth = depth * 0.6,
-                WindowCount = CalculateWindowCount(width, depth * 0.6, 0.15),
+                WindowCount = CalculateWindowCount(width, depth * 0.6, windowToWallRatio),
                 HasDoor = true
             });
             rooms.Add(new Room
@@ -173,7 +176,7 @@ public class HouseParametersService : IHouseParametersService
                     Z = 0,
                     Width = width * 0.6,
                     Depth = depth * 0.5,
-                    WindowCount = CalculateWindowCount(width * 0.6, depth * 0.5, 0.15),
+                    WindowCount = CalculateWindowCount(width * 0.6, depth * 0.5, windowToWallRatio),
                     HasDoor = true
                 });
                 rooms.Add(new Room
@@ -233,7 +236,7 @@ public class HouseParametersService : IHouseParametersService
                     Z = 0,
                     Width = width * 0.6,
                     Depth = depth * 0.7,
-                    WindowCount = CalculateWindowCount(width * 0.6, depth * 0.7, 0.15),
+                    WindowCount = CalculateWindowCount(width * 0.6, depth * 0.7, windowToWallRatio),
                     HasDoor = true
                 });
                 rooms.Add(new Room
@@ -309,7 +312,7 @@ public class HouseParametersService : IHouseParametersService
                     Z = 0,
                     Width = width * 0.5,
                     Depth = depth * 0.5,
-                    WindowCount = CalculateWindowCount(width * 0.5, depth * 0.5, 0.15),
+                    WindowCount = CalculateWindowCount(width * 0.5, depth * 0.5, windowToWallRatio),
                     HasDoor = true
                 });
                 rooms.Add(new Room

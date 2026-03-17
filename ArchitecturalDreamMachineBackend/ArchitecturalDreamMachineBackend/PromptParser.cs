@@ -40,9 +40,10 @@ public static class PromptParser
         var words = noPunctuation.Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries);
         
         // Step 5: Convert to lowercase, filter stop words, and remove duplicates
+        // Keep single-digit numbers (for "3 story" etc.) but filter other 1-char words
         var keywords = words
             .Select(w => w.ToLowerInvariant())
-            .Where(w => !StopWords.Contains(w) && w.Length > 1)
+            .Where(w => !StopWords.Contains(w) && (w.Length > 1 || char.IsDigit(w[0])))
             .Distinct()
             .ToList();
         
@@ -69,5 +70,86 @@ public static class PromptParser
         sanitized = Regex.Replace(sanitized, @"[<>""'&;\\`${}\[\]|\x00-\x1F]", "");
         
         return sanitized.Trim();
+    }
+
+    /// <summary>
+    /// Extract number of stories from keywords (e.g., "3", "story" → 3)
+    /// </summary>
+    public static int? ExtractStories(List<string> keywords)
+    {
+        // Map word forms to numbers
+        var numberWords = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "one", 1 }, { "single", 1 },
+            { "two", 2 }, { "double", 2 },
+            { "three", 3 }, { "triple", 3 },
+            { "four", 4 },
+            { "five", 5 },
+            { "six", 6 },
+            { "seven", 7 },
+            { "eight", 8 },
+            { "nine", 9 },
+            { "ten", 10 }
+        };
+
+        // Check if "story" or "stories" is in keywords
+        bool hasStoryKeyword = keywords.Any(k => 
+            k.Equals("story", StringComparison.OrdinalIgnoreCase) || 
+            k.Equals("stories", StringComparison.OrdinalIgnoreCase) ||
+            k.Equals("storey", StringComparison.OrdinalIgnoreCase) ||
+            k.Equals("storeys", StringComparison.OrdinalIgnoreCase) ||
+            k.Equals("floor", StringComparison.OrdinalIgnoreCase) ||
+            k.Equals("floors", StringComparison.OrdinalIgnoreCase));
+
+        if (!hasStoryKeyword)
+            return null;
+
+        // Look for a number (digit or word)
+        foreach (var keyword in keywords)
+        {
+            // Try numeric
+            if (int.TryParse(keyword, out int numericStories) && numericStories >= 1 && numericStories <= 10)
+            {
+                return numericStories;
+            }
+
+            // Try word form
+            if (numberWords.TryGetValue(keyword, out int wordStories))
+            {
+                return wordStories;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Extract building shape from keywords
+    /// </summary>
+    public static string? ExtractBuildingShape(List<string> keywords)
+    {
+        var shapeMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "cube", "cube" },
+            { "box", "cube" },
+            { "rectangular", "cube" },
+            { "simple", "cube" },
+            { "lshape", "l-shape" },
+            { "split", "split-level" },
+            { "splitlevel", "split-level" },
+            { "angled", "angled" },
+            { "angular", "angled" },
+            { "twostory", "two-story" }
+        };
+
+        foreach (var keyword in keywords)
+        {
+            if (shapeMap.TryGetValue(keyword, out string? shape))
+            {
+                return shape;
+            }
+        }
+
+        return null;
     }
 }

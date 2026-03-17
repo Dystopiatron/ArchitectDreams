@@ -77,13 +77,18 @@ PromptParser → HouseParametersService → DesignOrchestrationService
   ├── GeometryService      — 3D mesh primitives
   ├── RoofService          — flat & gabled strategies
   ├── WindowService        — windows on all exterior walls (dual output: GeometryData + WindowElement)
-  └── InteriorWallService  — partition walls with door openings (dual output: GeometryData + DoorElement)
+  ├── InteriorWallService  — partition walls with door openings (dual output: GeometryData + DoorElement)
+  └── WallFaceService      — perforated exterior wall panels (ShapeGeometry with window/door/overlap holes)
 Export/
   ├── GltfExporter         — GLB via SharpGLTF, PBR materials, transparent glass
   └── IfcExporter          — IFC4 via xBIM (see ROADMAP.md for phase status)
 ```
 
 All services registered as Scoped DI with `I<Name>Service` / `<Name>Service` interface+impl pairs. Layout strategies (`ILayoutStrategy`) and roof strategies (`IRoofStrategy`) use the strategy pattern.
+
+**Layout strategies** (`LayoutStrategies/`): `CubeLayoutStrategy`, `TwoStoryLayoutStrategy`, `LShapeLayoutStrategy`, `AngledLayoutStrategy`, `SplitLevelLayoutStrategy`. Each returns `LayoutData` with sections + roof sections.
+
+**WallFaceService pipeline**: For each section, generates one `WallFaceData` panel per exterior face (Front/Back/Right/Left). `IsFaceInterior()` suppresses fully interior faces. `ComputeOverlapHoles()` punches rectangular holes where sections overlap. Windows are tracked via `PlacedWindowIds` — the orchestrator filters out window geometry that didn't land on a visible face. Returns `WallFaceResult` (faces + placed window IDs).
 
 ---
 
