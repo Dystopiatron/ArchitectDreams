@@ -22,7 +22,7 @@ node --version    # v18.x or higher
 cd ArchitecturalDreamMachineBackend/ArchitecturalDreamMachineBackend
 dotnet restore
 dotnet build
-dotnet test       # 10 pass expected
+dotnet test       # 10 pass, 4 skipped (stretch goals)
 dotnet run        # Starts on http://localhost:5095
 ```
 
@@ -81,7 +81,8 @@ ASP.NET Core 8.0 API (Backend)
     |- GeometryService     — 3D mesh primitives
     |- RoofService         — flat & gabled roof strategies
     |- WindowService       — window placement on exterior walls
-    '- InteriorWallService — partition walls with door openings
+    |- InteriorWallService — partition walls with door openings
+    '- WallFaceService     — perforated wall panels with cutouts
   Export
     |- IfcExporter         — IFC4 via xBIM Toolkit
     '- GltfExporter        — GLB via SharpGLTF Toolkit

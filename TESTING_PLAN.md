@@ -1,7 +1,9 @@
 # Testing Plan — All Layouts x Stories
 
-**Date:** November 28, 2025
+**Created:** November 28, 2025
+**Updated:** March 17, 2026
 **Purpose:** Systematic testing of 5 layouts x 3 story counts to verify rendering.
+**Status:** Ready to execute — Wall Face Fix complete, geometry pipeline stable
 
 ---
 
@@ -14,14 +16,14 @@
 | 0 | Cube | 2500 | 1 | 1 |
 | 1 | Two-Story | 2501 | 2 (ground + upper 85%) | 1 (on upper) |
 | 2 | L-Shape | 2502 | 2 (main + side wing) | 2 |
-| 3 | Split-Level | 2503 | 2 (offset elevations) | 2 |
+| 3 | Split-Level | 2503 | 1 per story (odd floors full width, even floors 60% offset) | 1 per story |
 | 4 | Angled | 2504 | 2-3 (rotated 22.5 / -30 deg) | 2-3 |
 
 ### Stories: 1, 2, 3 (use `storiesOverride`)
 
 ---
 
-## Test Cases (15 Total)
+## Test Cases (16 Total)
 
 All use Modern style (flat roof) unless noted. Use Swagger or curl to test directly.
 
@@ -38,12 +40,13 @@ All use Modern style (flat roof) unless noted. Use Swagger or curl to test direc
 | 9 | L-Shape | 3 | 2502 | modern | Both wings three stories |
 | 10 | Split-Level | 1 | 2503 | modern | Two sections at different heights |
 | 11 | Split-Level | 2 | 2503 | modern | Multi-level offset |
-| 12 | Angled | 1 | 2504 | modern | Rotated sections |
-| 13 | Angled | 2 | 2504 | modern | Rotated, two stories |
-| 14 | Angled | 3 | 2504 | modern | Rotated, three stories |
-| 15 | L-Shape | 2 | 2502 | victorian | Gabled roofs on both wings |
+| 12 | Split-Level | 3 | 2503 | modern | ⭐ Primary regression test for wall face fix |
+| 13 | Angled | 1 | 2504 | modern | Rotated sections |
+| 14 | Angled | 2 | 2504 | modern | Rotated, two stories |
+| 15 | Angled | 3 | 2504 | modern | Rotated, three stories |
+| 16 | L-Shape | 2 | 2502 | victorian | Gabled roofs on both wings |
 
-**Tests completed:** 0 / 15
+**Tests completed:** 0 / 16
 
 ---
 
@@ -63,6 +66,10 @@ For each test, verify:
 ---
 
 ## Known Issues to Watch For
+
+**~~Floating windows on multi-section layouts~~** — ✅ Fixed by `WallFaceService.ComputeOverlapHoles()` and window filtering.
+
+**~~Wall panels sticking through sections~~** — ✅ Fixed by overlap hole computation in `WallFaceService`.
 
 **Roof at ground level** — Check roof Y calculation: should be `section.Y + section.Height + (roofThickness / 2)`. Files: `FlatRoofStrategy.cs`, `GabledRoofStrategy.cs`.
 

@@ -2,7 +2,7 @@
 
 **Date:** 2026-02-20
 **Branch:** `FT/OverClock`
-**Status:** Diagnosed & planned, not yet implemented
+**Status:** ✅ Implemented (completed 2026-03)
 
 ---
 

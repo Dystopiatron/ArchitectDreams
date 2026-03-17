@@ -38,7 +38,7 @@ Main branch: `master`
 # All from ArchitecturalDreamMachineBackend/ArchitecturalDreamMachineBackend/
 dotnet build
 dotnet run              # Starts on http://localhost:5095
-dotnet test             # 10 tests expected to pass
+dotnet test             # 10 pass, 4 skipped (stretch goals)
 dotnet test --filter "FullyQualifiedName~PromptParserTests"  # Run a single test class
 ```
 
@@ -155,7 +155,7 @@ dotnet user-secrets set "ApiKey" "your-dev-key"
 
 ## Testing
 
-**Backend** (xUnit + Moq): Tests are co-located in `Tests/` inside the main project (not a separate test project). 3 test classes: `DesignsControllerTests` (4), `GeometryTests` (2 active + 4 skipped), `PromptParserTests` (4).
+**Backend** (xUnit + Moq): Tests are co-located in `Tests/` inside the main project (not a separate test project). Test classes: `DesignsControllerTests` (4), `GeometryTests` (2 active + 4 skipped), `PromptParserTests` (4). Total: 10 passing, 4 skipped (stretch goals).
 
 ```bash
 dotnet test                                           # All tests
