@@ -130,6 +130,10 @@ public class HouseParametersService : IHouseParametersService
         if (shape == "angled")
             return GenerateAngledRoomLayout(width, depth, roomCount, stories);
 
+        // Split-level: floor 1 spans full footprint, floor 2 only spans right half (main section)
+        if (shape == "split-level")
+            return GenerateSplitLevelRoomLayout(width, depth, roomCount, stories);
+
         if (roomCount <= 3)
         {
             // Small house: living, bedroom, bath
@@ -656,6 +660,66 @@ public class HouseParametersService : IHouseParametersService
                 WindowCount = 3, HasDoor = true });
         }
 
+        return rooms;
+    }
+
+    /// <summary>
+    /// Generate room layout for split-level buildings.
+    /// Floor 1: Full footprint (wing on left 50%, main on right 50%)
+    /// Floor 2: Only main section (right 50% of footprint)
+    /// </summary>
+    private static List<Room> GenerateSplitLevelRoomLayout(
+        double width, double depth, int roomCount, int stories)
+    {
+        var rooms = new List<Room>();
+        
+        // Main section is right 50% of footprint
+        // In 0-based room coords, X from width*0.5 to width
+        double mainMinX = width * 0.5;
+        double mainW = width * 0.5;
+        
+        // Wing section is left 50% of footprint
+        // In 0-based room coords, X from 0 to width*0.5
+        double wingMinX = 0;
+        double wingW = width * 0.5;
+        
+        // Floor 1: rooms in both sections
+        // Wing (left side) - garage/family room
+        rooms.Add(new Room { Name = "Family Room", Floor = 1,
+            X = wingMinX, Z = 0, Width = wingW, Depth = depth * 0.6,
+            WindowCount = 2, HasDoor = true });
+        rooms.Add(new Room { Name = "Garage", Floor = 1,
+            X = wingMinX, Z = depth * 0.6, Width = wingW, Depth = depth * 0.4,
+            WindowCount = 1, HasDoor = true });
+        
+        // Main (right side) - living areas
+        rooms.Add(new Room { Name = "Living Room", Floor = 1,
+            X = mainMinX, Z = 0, Width = mainW, Depth = depth * 0.5,
+            WindowCount = 3, HasDoor = true });
+        rooms.Add(new Room { Name = "Kitchen", Floor = 1,
+            X = mainMinX, Z = depth * 0.5, Width = mainW * 0.6, Depth = depth * 0.5,
+            WindowCount = 2, HasDoor = true });
+        rooms.Add(new Room { Name = "Dining", Floor = 1,
+            X = mainMinX + mainW * 0.6, Z = depth * 0.5, Width = mainW * 0.4, Depth = depth * 0.5,
+            WindowCount = 1, HasDoor = true });
+        
+        // Floor 2: ONLY in main section (right half)
+        if (stories >= 2)
+        {
+            rooms.Add(new Room { Name = "Master Bedroom", Floor = 2,
+                X = mainMinX, Z = 0, Width = mainW * 0.6, Depth = depth * 0.5,
+                WindowCount = 2, HasDoor = true });
+            rooms.Add(new Room { Name = "Bedroom 2", Floor = 2,
+                X = mainMinX + mainW * 0.6, Z = 0, Width = mainW * 0.4, Depth = depth * 0.5,
+                WindowCount = 1, HasDoor = true });
+            rooms.Add(new Room { Name = "Bathroom", Floor = 2,
+                X = mainMinX, Z = depth * 0.5, Width = mainW * 0.4, Depth = depth * 0.5,
+                WindowCount = 1, HasDoor = true });
+            rooms.Add(new Room { Name = "Office", Floor = 2,
+                X = mainMinX + mainW * 0.4, Z = depth * 0.5, Width = mainW * 0.6, Depth = depth * 0.5,
+                WindowCount = 2, HasDoor = true });
+        }
+        
         return rooms;
     }
 

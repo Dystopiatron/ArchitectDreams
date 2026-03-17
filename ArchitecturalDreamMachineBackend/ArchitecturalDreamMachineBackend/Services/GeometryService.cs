@@ -105,8 +105,8 @@ namespace ArchitecturalDreamMachineBackend.Services
         }
         
         /// <summary>
-        /// Create parapet wall geometries for flat roofs
-        /// Returns 4 geometries (front, back, left, right)
+        /// Create parapet/railing geometries for flat roofs - fence style with posts and rails
+        /// Returns multiple geometries forming a railing around the roof perimeter
         /// </summary>
         public List<GeometryData> CreateParapetWalls(
             double width,
@@ -120,56 +120,126 @@ namespace ArchitecturalDreamMachineBackend.Services
             
             var parapets = new List<GeometryData>();
             
-            // Front and back walls (along width)
-            var frontBackVertices = Geometry.VertexCalculator.CalculateParapetVertices(
-                roofWidth + parapetThickness, parapetHeight, parapetThickness);
-            var parapetIndices = Geometry.FaceGenerator.ParapetFaces();
+            // Railing parameters
+            double postSize = 0.25;       // Square post cross-section
+            double railHeight = 0.15;     // Height of horizontal rails
+            double railThickness = 0.1;   // Depth of rails
+            double postSpacing = 4.0;     // Distance between posts
+            double topRailY = parapetHeight - railHeight / 2;
+            double midRailY = parapetHeight * 0.5;
+            double bottomRailY = railHeight / 2 + 0.1;  // Slight gap from roof
             
-            // Front wall (Z+)
-            parapets.Add(new GeometryData
-            {
-                Vertices = frontBackVertices,
-                Indices = parapetIndices,
-                MaterialType = "concrete",
-                Color = "#e0e0e0",
-                Position = new Position { X = 0, Y = parapetHeight / 2, Z = roofDepth / 2 }
-            });
+            // Generate posts and rails for each edge
+            // Front edge (Z+)
+            AddRailingSegment(parapets, roofWidth, parapetHeight, 
+                0, 0, roofDepth / 2, 0,
+                postSize, postSpacing, railHeight, railThickness,
+                topRailY, midRailY, bottomRailY);
             
-            // Back wall (Z-)
-            parapets.Add(new GeometryData
-            {
-                Vertices = frontBackVertices,
-                Indices = parapetIndices,
-                MaterialType = "concrete",
-                Color = "#e0e0e0",
-                Position = new Position { X = 0, Y = parapetHeight / 2, Z = -roofDepth / 2 }
-            });
+            // Back edge (Z-)
+            AddRailingSegment(parapets, roofWidth, parapetHeight,
+                0, 0, -roofDepth / 2, 0,
+                postSize, postSpacing, railHeight, railThickness,
+                topRailY, midRailY, bottomRailY);
             
-            // Left and right walls (along depth)
-            var leftRightVertices = Geometry.VertexCalculator.CalculateParapetVertices(
-                roofDepth, parapetHeight, parapetThickness);
+            // Right edge (X+)
+            AddRailingSegment(parapets, roofDepth, parapetHeight,
+                roofWidth / 2, 0, 0, Math.PI / 2,
+                postSize, postSpacing, railHeight, railThickness,
+                topRailY, midRailY, bottomRailY);
             
-            // Right wall (X+) - rotated 90 degrees
-            parapets.Add(new GeometryData
-            {
-                Vertices = leftRightVertices,
-                Indices = parapetIndices,
-                MaterialType = "concrete",
-                Color = "#e0e0e0",
-                Position = new Position { X = roofWidth / 2, Y = parapetHeight / 2, Z = 0 }
-            });
-            
-            // Left wall (X-) - rotated 90 degrees
-            parapets.Add(new GeometryData
-            {
-                Vertices = leftRightVertices,
-                Indices = parapetIndices,
-                MaterialType = "concrete",
-                Color = "#e0e0e0",
-                Position = new Position { X = -roofWidth / 2, Y = parapetHeight / 2, Z = 0 }
-            });
+            // Left edge (X-)
+            AddRailingSegment(parapets, roofDepth, parapetHeight,
+                -roofWidth / 2, 0, 0, Math.PI / 2,
+                postSize, postSpacing, railHeight, railThickness,
+                topRailY, midRailY, bottomRailY);
             
             return parapets;
+        }
+        
+        /// <summary>
+        /// Add posts and rails for one edge of the railing
+        /// </summary>
+        private void AddRailingSegment(
+            List<GeometryData> parapets,
+            double length, double height,
+            double centerX, double centerY, double centerZ,
+            double rotationY,
+            double postSize, double postSpacing,
+            double railHeight, double railThickness,
+            double topRailY, double midRailY, double bottomRailY)
+        {
+            var parapetIndices = Geometry.FaceGenerator.ParapetFaces();
+            
+            // Calculate number of posts needed
+            int postCount = Math.Max(2, (int)Math.Ceiling(length / postSpacing) + 1);
+            double actualSpacing = length / (postCount - 1);
+            
+            // Create posts
+            var postVertices = Geometry.VertexCalculator.CalculateParapetVertices(postSize, height, postSize);
+            for (int i = 0; i < postCount; i++)
+            {
+                double localX = -length / 2 + i * actualSpacing;
+                
+                // Calculate world position based on rotation
+                double worldX, worldZ;
+                if (Math.Abs(rotationY) < 0.01)
+                {
+                    worldX = centerX + localX;
+                    worldZ = centerZ;
+                }
+                else
+                {
+                    worldX = centerX;
+                    worldZ = centerZ + localX;
+                }
+                
+                parapets.Add(new GeometryData
+                {
+                    Vertices = postVertices,
+                    Indices = parapetIndices,
+                    MaterialType = "metal",
+                    Color = "#404040",
+                    Position = new Position { X = worldX, Y = height / 2, Z = worldZ }
+                });
+            }
+            
+            // Create horizontal rails (top, middle, bottom)
+            var topRailVertices = Geometry.VertexCalculator.CalculateParapetVertices(length, railHeight, railThickness);
+            var midRailVertices = Geometry.VertexCalculator.CalculateParapetVertices(length, railHeight * 0.8, railThickness * 0.8);
+            
+            // Top rail
+            parapets.Add(new GeometryData
+            {
+                Vertices = topRailVertices,
+                Indices = parapetIndices,
+                MaterialType = "metal",
+                Color = "#505050",
+                Position = new Position { X = centerX, Y = topRailY, Z = centerZ },
+                Rotation = new Rotation { Y = rotationY }
+            });
+            
+            // Middle rail
+            parapets.Add(new GeometryData
+            {
+                Vertices = midRailVertices,
+                Indices = parapetIndices,
+                MaterialType = "metal",
+                Color = "#484848",
+                Position = new Position { X = centerX, Y = midRailY, Z = centerZ },
+                Rotation = new Rotation { Y = rotationY }
+            });
+            
+            // Bottom rail
+            parapets.Add(new GeometryData
+            {
+                Vertices = midRailVertices,
+                Indices = parapetIndices,
+                MaterialType = "metal",
+                Color = "#484848",
+                Position = new Position { X = centerX, Y = bottomRailY, Z = centerZ },
+                Rotation = new Rotation { Y = rotationY }
+            });
         }
         
         /// <summary>

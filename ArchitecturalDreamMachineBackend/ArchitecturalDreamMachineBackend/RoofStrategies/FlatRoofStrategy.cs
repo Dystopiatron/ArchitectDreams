@@ -56,12 +56,13 @@ namespace ArchitecturalDreamMachineBackend.RoofStrategies
                     overhang);
                 
                 // Adjust parapet positions to be on top of roof
+                // The parapet local Y=0 is the base, need to place it at roof surface level
                 foreach (var parapet in parapets)
                 {
                     if (parapet.Position != null)
                     {
                         parapet.Position.X += section.X;
-                        parapet.Position.Y += section.Y;
+                        parapet.Position.Y += section.Y + roofThickness;  // On top of roof surface
                         parapet.Position.Z += section.Z;
                     }
                 }
