@@ -43,28 +43,48 @@ Completed work and planned enhancements.
 - BuildingModel aggregate (floors, walls, doors, windows, slabs, roof)
 - Services updated to produce semantic entities alongside GeometryData
 
+### Wall Face System (Phase 4) — Completed 2026-03
+- `WallFaceService` generates perforated wall panels with window/door cutouts
+- `ComputeOverlapHoles()` punches holes where sections overlap (fixes floating panels)
+- `WallFaceResult` tracks `PlacedWindowIds` to filter floating window geometry
+- Coplanar face tiebreaker gives priority to taller sections
+- Frontend `createWallFacePanel()` renders with `THREE.ShapeGeometry` holes
+- Fixes: floating windows, wall panels sticking through sections, z-fighting
+
+### Style System Improvements (2026-03)
+- `MaxWindowsPerRoom` raised from 5 to 12
+- `WindowStyle` now affects geometry: small=2x3ft, large=5x6ft, ornate=3x5ft
+- `RoofGeometry.Parapets` collection — parapets render in GLB and frontend
+- `StyleResolverService` consolidates style matching (was duplicated 4×)
+
 ---
 
 ## Pending
 
-### Style System Audit (2026-02-21)
+### Style System Audit (2026-02-21) — Updated 2026-03-17
 
 Comprehensive review of style differentiation (Modern, Victorian, Brutalist).
 
-**No breaking conflicts found** — styles don't clash during generation. However, several gaps cause styles to produce near-identical output despite different parameters.
+**No breaking conflicts found** — styles don't clash during generation.
 
-#### Critical Issues
+#### Fixed Issues ✅
+
+| Issue | Resolution |
+|-------|------------|
+| `MaxWindowsPerRoom=5` clamps all styles | ✅ Raised to 12 in `ArchitecturalConstants.cs` |
+| WindowStyle decorative only | ✅ `WindowService.GetWindowDimensions()` now maps small=2x3, large=5x6, ornate=3x5 |
+| Parapets generated but discarded | ✅ `RoofGeometry.Parapets` collection added; GLB/frontend render them |
+| Style matching duplicated 4× | ✅ `StyleResolverService` consolidates all style resolution |
+| SplitLevelLayoutStrategy ignores stories > 2 | ✅ Never true — code correctly loops all floors |
+
+#### Remaining Issues
 
 | Issue | Location | Impact |
 |-------|----------|--------|
-| `MaxWindowsPerRoom=5` clamps all styles | `ArchitecturalConstants.cs#L67` | Modern 30%, Victorian 20%, Brutalist 10% all produce 5 windows in typical rooms |
 | `WindowToWallRatio` bypassed | `HouseParametersService.GenerateRoomLayout()` | Uses hardcoded `0.15` instead of style value |
-| Parapets generated but discarded | `FlatRoofStrategy.CreateParapetWalls()` | `RoofGeometry` has no storage — Modern/Brutalist roofs identical |
-| WindowStyle decorative only | `WindowService.cs` | `"small"/"ornate"/"large"` never affects geometry |
-| Style matching duplicated 4× | `DesignsController.cs` lines 58, 160, 220, 280 | Must apply fixes in all locations |
-| Material type mismatch | Frontend `GeometryRenderer.js` | Doesn't recognize `"stucco"`, `"wood siding"` |
+| Material type mismatch | Frontend `GeometryRenderer.js` | Doesn't recognize all backend material types |
 
-#### Medium Issues
+#### Medium Issues (Low Priority)
 
 | Issue | Location | Impact |
 |-------|----------|--------|
@@ -72,21 +92,12 @@ Comprehensive review of style differentiation (Modern, Victorian, Brutalist).
 | IfcExporter wall props hardcoded | `IfcExporter.AddWallProperties()` | Always "Stucco" regardless of style |
 | ObjExporter exports cube only | `ObjExporter.cs` | Legacy — ignores BuildingGeometry |
 | `Design` stores keywords, not StyleTemplateId | `Design.cs` | Export re-parses; could theoretically change |
-| TwoStoryLayoutStrategy redundant | `LayoutStrategies/` | Identical output to CubeLayoutStrategy |
+| TwoStoryLayoutStrategy redundant | `LayoutStrategies/` | Near-identical output to CubeLayoutStrategy |
 
-#### Remediation Priority
+#### Remaining Remediation Priority
 
-1. Raise or remove `MaxWindowsPerRoom` constant
-2. Pass `WindowToWallRatio` to `GenerateRoomLayout()`
-3. Add `Parapets` collection to `RoofGeometry`, return from strategy
-4. Extract style resolution to shared service (eliminate 4× duplication)
-5. Implement `WindowStyle` → dimensions mapping
-6. Normalize material types between backend/frontend
-
-#### Documentation Inconsistencies Found
-
-- WALL_FACE_FIX_PLAN.md claimed SplitLevelLayoutStrategy ignores stories > 2 — code correctly loops all floors
-- TESTING_PLAN.md dated Nov 2025 shows "0 / 15" tests completed — appears stale
+1. Pass `WindowToWallRatio` to `GenerateRoomLayout()`
+2. Normalize material types between backend/frontend
 
 ---
 
